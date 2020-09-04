@@ -6,11 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import StreamingResponse, FileResponse
 
-from kubernetes_asyncio import client, config
-from kubernetes_asyncio.utils.create_from_yaml import create_from_yaml_single_item
-
 from pydantic import BaseModel
-from pprint import pprint
 
 import os
 import base64
@@ -23,7 +19,7 @@ import datetime
 import aiohttp
 
 from cleanup import StorageManager
-
+from k8smanager import K8SManager
 
 class CaptureRequest(BaseModel):
     urls: List[str]
@@ -38,14 +34,6 @@ app.mount("/replay", StaticFiles(directory="replay"), name="replay")
 
 templates = Jinja2Templates(directory="templates")
 
-# if os.environ.get("IN_CLUSTER"):
-if os.environ.get("BROWSER"):
-    print("Cluster Init")
-    config.load_incluster_config()
-
-core_api = client.CoreV1Api()
-batch_api = client.BatchV1Api()
-
 profile_url = os.environ.get("PROFILE_URL", "")
 headless = not profile_url
 
@@ -55,7 +43,7 @@ storage_prefix = os.environ.get("STORAGE_PREFIX")
 job_max_duration = int(os.environ.get("JOB_MAX_DURATION") or 0) * 60
 
 storage = StorageManager()
-
+k8s = K8SManager()
 
 def make_jobid():
     return base64.b32encode(os.urandom(15)).decode("utf-8").lower()
@@ -79,21 +67,16 @@ async def start(capture: CaptureRequest):
 async def delete_job(jobid: str, index: str):
     name = get_job_name(jobid, index)
 
-    try:
-        api_response = await batch_api.read_namespaced_job(
-            name=name, namespace="browsers"
-        )
-    except Exception as e:
-        print(e)
+    api_response = await k8s.get_job(name)
+    if not api_response:
         return {"deleted": False}
 
     storage_url = api_response.metadata.annotations.get("storageUrl")
     if storage_url:
         await storage.delete_object(storage_url)
 
-    api_response = await batch_api.delete_namespaced_job(
-        name=name, namespace="browsers"
-    )
+    api_response = await k8s.delete_job(name)
+
     return {"deleted": True}
 
 
@@ -109,9 +92,7 @@ async def list_jobs(jobid: str = "", userid: str = "", index: int = -1):
     if index >= 0:
         label_selector.append(f"index={index}")
 
-    api_response = await batch_api.list_namespaced_job(
-        namespace="browsers", label_selector=",".join(label_selector)
-    )
+    api_response = await k8s.list_jobs(label_selector==",".join(label_selector))
 
     jobs = []
 
@@ -153,25 +134,35 @@ async def start_job(capture: CaptureRequest):
 
         access_url = await storage.get_presigned_url(storage_url, download_filename)
 
+        labels = {
+            "userid": capture.userid,
+            "jobid": jobid,
+            "index": index
+        }
+
+        annotations = {
+            "userTag": capture.tag,
+            "accessUrl": access_url,
+            "captureUrl": url,
+            "storageUrl": storage_url,
+        }
+
         data = templates.env.get_template("browser-job.yaml").render(
             {
-                "userid": capture.userid,
-                "jobid": jobid,
-                "index": index,
                 "job_name": job_name,
-                "user_tag": capture.tag,
+                "labels": labels,
+                "annotations": annotations,
                 "url": url,
                 "filename": filename,
-                "access_url": access_url,
-                "storage_url": storage_url,
                 "profile_url": profile_url,
                 "headless": headless,
                 "job_max_duration": job_max_duration
             }
         )
+
         job = yaml.safe_load(data)
 
-        res = await batch_api.create_namespaced_job(namespace="browsers", body=job)
+        res = await k8s.create_job(job)
 
         index += 1
 

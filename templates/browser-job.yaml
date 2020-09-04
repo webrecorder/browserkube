@@ -1,19 +1,17 @@
----
 apiVersion: batch/v1
 kind: Job
 activeDeadlineSeconds: 600
 metadata:
   name: "{{ job_name }}"
-  labels:
-    userid: "{{ userid }}"
-    jobid: "{{ jobid }}"
-    index: "{{ index }}"
+  labels: 
+    {%- for name, value in labels.items() %}
+    {{ name }}: "{{ value }}"
+    {%- endfor %}
 
   annotations:
-    userTag: "{{ user_tag }}"
-    captureUrl: "{{ url }}"
-    accessUrl: "{{ access_url }}"
-    storageUrl: "{{ storage_url }}"
+    {%- for name, value in annotations.items() %}
+    {{ name }}: "{{ value }}"
+    {%- endfor %}
 
 spec:
   backoffLimit: 2

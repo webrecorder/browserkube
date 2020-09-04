@@ -19,7 +19,7 @@ spec:
           restartPolicy: Never
           containers:
           - name: cleanup
-            image: ikreymer/permaproof-main
+            image: ikreymer/permaproof-main:{{ .Values.version | default "latest" }}
             imagePullPolicy: Always
             command: ["python", "cleanup.py"]
             envFrom:
@@ -58,7 +58,7 @@ spec:
     spec:     
       containers:
         - name: main
-          image: ikreymer/permaproof-main
+          image: ikreymer/permaproof-main:{{ .Values.version | default "latest" }}
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
