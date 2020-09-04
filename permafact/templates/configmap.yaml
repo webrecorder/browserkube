@@ -9,7 +9,6 @@ stringData:
   AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
   AWS_SECRET_ACCESS_KEY: "{{ .Values.storage.secret_key }}"
   AWS_ENDPOINT: "{{ .Values.storage.api_endpoint }}"
-  STORAGE_PREFIX: "{{ .Values.storage.storage_prefix }}"
   MC_HOST: "https://{{ .Values.storage.access_key }}:{{ .Values.storage.secret_key }}@{{ .Values.profile_api_endpoint }}"
   ACL: "{{ .Values.storage.acl }}"
 
@@ -24,18 +23,18 @@ stringData:
   AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
   AWS_SECRET_ACCESS_KEY: "{{ .Values.storage.secret_key }}"
   AWS_ENDPOINT: "{{ .Values.storage.api_endpoint }}"
-  STORAGE_PREFIX: "{{ .Values.storage.storage_prefix }}"
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Values.name }}-config
+  namespace: default
 
 data:
-  BROWSER: {{ .Values.browser }}
-  ACCESS_PREFIX: {{ .Values.storage.access_prefix }}
-  STORAGE_PREFIX: {{ .Values.storage.storage_prefix }}
+  BROWSER: "{{ .Values.browser }}"
+  ACCESS_PREFIX: "{{ .Values.storage.access_prefix }}"
+  STORAGE_PREFIX: "{{ .Values.storage.storage_prefix }}"
   PROFILE_URL: "{{ .Values.profile_url | default "" }}"
   JOB_CLEANUP_INTERVAL: "{{ .Values.job_cleanup_interval }}"
   JOB_MAX_DURATION: "{{ .Values.job_max_duration }}"

@@ -17,9 +17,10 @@ const PAGE_TIMEOUT = 120000;
 // ================================================================================================
 class Driver
 {
-  constructor() {
+  constructor(captureUrl, storageUrl) {
+    this.captureUrl = captureUrl;
+    this.storageUrl = storageUrl;
     this.browserHost = process.env.BROWSER_HOST || "localhost";
-    this.captureUrl = process.env.CAPTURE_URL || (process.argv.length > 2 ? process.argv[2] : null);
     this.proxyHost = process.env.PROXY_HOST;
     this.proxyPort = process.env.PROXY_PORT || 8080;
     this.proxyOrigin = `http://${this.proxyHost}:${this.proxyPort}`;
@@ -74,9 +75,8 @@ class Driver
       try {
         browser = await puppeteer.connect({browserURL, defaultViewport});
       } catch (e) {
-        console.log(e);
-        console.log("Waiting for browser...");
-        await utils.sleep(500);
+        //console.log(e);
+        await utils.sleep(100);
       }
     }
 
@@ -251,7 +251,7 @@ class Driver
       secretAccessKey
     });
   
-    const uu = new URL(process.env.STORAGE_PREFIX + process.env.UPLOAD_FILENAME);
+    const uu = new URL(this.storageUrl);
   
     var params = {
       Body: fs.createReadStream(OUTPUT_FILE),

@@ -1,50 +1,52 @@
 import asyncio
 import os
 import datetime
-import aiobotocore
-import urllib.parse
-from k8smanager import K8SManager
+from managers import K8SManager, StorageManager
 
 
 # ============================================================================
-class StorageManager:
-    def __init__(self):
-        self.session = aiobotocore.get_session()
-        self.endpoint_url = os.environ.get("AWS_ENDPOINT", "")
-        if not self.endpoint_url:
-            self.endpoint_url = None
+async def delete_jobs(k8s, cleanup_interval, callback=None):
+    api_response = await k8s.list_jobs()
 
-    async def delete_object(self, url):
-        async with self.session.create_client(
-            "s3",
-            endpoint_url=self.endpoint_url,
-            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        ) as s3:
-            parts = urllib.parse.urlsplit(url)
-            resp = await s3.delete_object(Bucket=parts.netloc, Key=parts.path[1:])
+    for job in api_response.items:
+        if job.status.succeeded != 1:
+            continue
 
-    async def get_presigned_url(self, url, download_filename=None):
-        async with self.session.create_client(
-            "s3",
-            endpoint_url=self.endpoint_url,
-            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        ) as s3:
-            parts = urllib.parse.urlsplit(url)
+        duration = datetime.datetime.utcnow() - job.status.start_time.replace(
+            tzinfo=None
+        )
 
-            params = {"Bucket": parts.netloc, "Key": parts.path[1:]}
+        if duration < cleanup_interval:
+            print("Keeping job {0}, not old enough".format(job.metadata.name))
+            continue
 
-            if download_filename:
-                params["ResponseContentDisposition"] = (
-                    "attachment; filename=" + download_filename
-                )
+        storageUrl = job.metadata.annotations.get("storageUrl")
+        if storageUrl:
+            try:
+                print("Deleting archive file: " + storageUrl)
+                await storage.delete_object(storageUrl)
+                return True
+            except Exception as e:
+                print(e)
+                return False
 
-            return await s3.generate_presigned_url(
-                "get_object",
-                Params=params,
-                ExpiresIn=int(os.environ.get("JOB_CLEANUP_INTERVAL", 60)) * 60,
-            )
+        print("Deleting job: " + job.metadata.name)
+
+        await k8s.delete_job(job.metadata.name)
+
+
+# ============================================================================
+async def delete_pods(k8s, cleanup_interval):
+    api_response = await k8s.list_pods(field_selector="status.phase=Succeeded")
+
+    for pod in api_response.items:
+        if (
+            datetime.datetime.utcnow() - pod.status.start_time.replace(tzinfo=None)
+        ) < cleanup_interval:
+            print("Keeping pod {0}, not old enough".format(pod.metadata.name))
+            continue
+
+        await k8s.delete_pod(self.metadata.name)
 
 
 # ============================================================================
@@ -60,23 +62,12 @@ async def main():
 
     print("Deleting jobs older than {0} minutes".format(cleanup_interval))
 
-    async def delete_obj(job):
-        storageUrl = job.metadata.annotations.get("storageUrl")
-        if storageUrl:
-            try:
-                print("Deleting archive file: " + storageUrl)
-                await storage.delete_object(storageUrl)
-                return True
-            except Exception as e:
-                print(e)
-                return False
-
-    await k8s.delete_jobs(cleanup_interval, delete_obj)
-    await k8s.delete_pods(cleanup_interval)
+    await delete_jobs(k8s, cleanup_interval)
+    await delete_pods(k8s, cleanup_interval)
     print("Done!")
 
 
-# asyncio.run(main())
+# ============================================================================
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())

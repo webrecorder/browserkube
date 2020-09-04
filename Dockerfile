@@ -9,7 +9,7 @@ RUN pip install -r requirements.txt
 
 ADD main.py /app/
 ADD cleanup.py /app/
-ADD k8smanager.py /app/
+ADD managers.py /app/
 
 CMD uvicorn main:app --port 80 --host 0.0.0.0
 

@@ -18,8 +18,7 @@ import datetime
 
 import aiohttp
 
-from cleanup import StorageManager
-from k8smanager import K8SManager
+from managers import K8SManager, StorageManager
 
 class CaptureRequest(BaseModel):
     urls: List[str]
@@ -152,8 +151,8 @@ async def start_job(capture: CaptureRequest):
                 "job_name": job_name,
                 "labels": labels,
                 "annotations": annotations,
-                "url": url,
-                "filename": filename,
+                "capture_url": url,
+                "storage_url": storage_url,
                 "profile_url": profile_url,
                 "headless": headless,
                 "job_max_duration": job_max_duration

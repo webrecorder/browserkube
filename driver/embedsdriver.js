@@ -14,8 +14,8 @@ const { Driver } = require("./driver");
 // ================================================================================================
 class EmbedDriver extends Driver
 {
-  constructor() {
-    super();
+  constructor(...args) {
+    super(...args);
     this.embedPort = Number(process.env.EMBED_PORT || 3000);
     this.embedHost = process.env.EMBED_HOST || "localhost";
 

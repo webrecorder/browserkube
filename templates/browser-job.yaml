@@ -159,7 +159,7 @@ spec:
         # driver
         # ==================================
         - name: driver
-          image: ikreymer/permaproof-driver
+          image: ikreymer/permaproof-driver:dev
           imagePullPolicy: Always
 
           resources:
@@ -194,10 +194,10 @@ spec:
               value: "80"
 
             - name: CAPTURE_URL
-              value: "{{ url }}"
+              value: "{{ capture_url }}"
 
-            - name: UPLOAD_FILENAME
-              value: "{{ filename }}"
+            - name: STORAGE_URL
+              value: "{{ storage_url }}"
 
             - name: EXIT_FILE
               value: "/tmp/out/exit"
