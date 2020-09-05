@@ -20,6 +20,7 @@ import aiohttp
 
 from managers import K8SManager, StorageManager
 
+
 class CaptureRequest(BaseModel):
     urls: List[str]
     userid: str = "user"
@@ -36,6 +37,8 @@ templates = Jinja2Templates(directory="templates")
 profile_url = os.environ.get("PROFILE_URL", "")
 headless = not profile_url
 
+use_vnc = os.environ.get("VNC") and not headless
+
 access_prefix = os.environ.get("ACCESS_PREFIX")
 storage_prefix = os.environ.get("STORAGE_PREFIX")
 
@@ -43,6 +46,7 @@ job_max_duration = int(os.environ.get("JOB_MAX_DURATION") or 0) * 60
 
 storage = StorageManager()
 k8s = K8SManager()
+
 
 def make_jobid():
     return base64.b32encode(os.urandom(15)).decode("utf-8").lower()
@@ -55,6 +59,36 @@ def get_job_name(jobid, index):
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/browser/{jobname}", response_class=HTMLResponse)
+async def get_browser(jobname: str, request: Request):
+    return templates.TemplateResponse(
+        "browser.html",
+        {
+            "request": request,
+            "jobname": jobname,
+            "webrtc": False,
+            "webrtc_video": False,
+        },
+    )
+
+
+@app.post("/api/flock/start/{jobname}")
+async def flock_post(jobname: str, request: Request):
+    api_response = await k8s.get_job(jobname)
+    if not api_response:
+        return {"not_found": True}
+
+    return {
+        "containers": {
+            "xserver": {
+                "ip": "service-" + jobname,
+                "ports": {"cmd-port": 6082, "vnc-port": 6080},
+                "environ": {"VNC_PASS": api_response.metadata.annotations.get("vnc_pass")},
+            }
+        }
+    }
 
 
 @app.post("/captures")
@@ -76,6 +110,8 @@ async def delete_job(jobid: str, index: str):
 
     api_response = await k8s.delete_job(name)
 
+    api_response = await k8s.delete_service("service-" + name)
+
     return {"deleted": True}
 
 
@@ -91,7 +127,7 @@ async def list_jobs(jobid: str = "", userid: str = "", index: int = -1):
     if index >= 0:
         label_selector.append(f"index={index}")
 
-    api_response = await k8s.list_jobs(label_selector==",".join(label_selector))
+    api_response = await k8s.list_jobs(label_selector == ",".join(label_selector))
 
     jobs = []
 
@@ -127,23 +163,25 @@ async def start_job(capture: CaptureRequest):
         storage_url = storage_prefix + filename
 
         try:
-            download_filename = urllib.parse.urlsplit(url).netloc + '-' + str(datetime.datetime.utcnow())[:10] + '.wacz'
+            download_filename = (
+                urllib.parse.urlsplit(url).netloc
+                + "-"
+                + str(datetime.datetime.utcnow())[:10]
+                + ".wacz"
+            )
         except:
             download_filename = None
 
         access_url = await storage.get_presigned_url(storage_url, download_filename)
 
-        labels = {
-            "userid": capture.userid,
-            "jobid": jobid,
-            "index": index
-        }
+        labels = {"userid": capture.userid, "jobid": jobid, "index": index}
 
         annotations = {
             "userTag": capture.tag,
             "accessUrl": access_url,
             "captureUrl": url,
             "storageUrl": storage_url,
+            "vnc_pass": make_jobid()
         }
 
         data = templates.env.get_template("browser-job.yaml").render(
@@ -155,13 +193,23 @@ async def start_job(capture: CaptureRequest):
                 "storage_url": storage_url,
                 "profile_url": profile_url,
                 "headless": headless,
-                "job_max_duration": job_max_duration
+                "vnc": use_vnc,
+                "job_max_duration": job_max_duration,
             }
         )
 
         job = yaml.safe_load(data)
 
         res = await k8s.create_job(job)
+
+        if use_vnc:
+            data = templates.env.get_template("browser-service.yaml").render(
+                {"job_name": job_name}
+            )
+
+            service = yaml.safe_load(data)
+
+            res = await k8s.create_service(service)
 
         index += 1
 

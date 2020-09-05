@@ -202,6 +202,12 @@ class Driver
       console.log(e);
     }
 
+    try {
+      await fetch("http://localhost:6082/exit");
+    } catch (e) {
+      console.log(e);
+    }
+
     this.done = true;
     setStatus("Done!");
 

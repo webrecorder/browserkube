@@ -11,7 +11,7 @@ ADD main.py /app/
 ADD cleanup.py /app/
 ADD managers.py /app/
 
-CMD uvicorn main:app --port 80 --host 0.0.0.0
+CMD uvicorn main:app --port 8080 --host 0.0.0.0
 
 #COPY app.py driver/embeds.json /app/
 COPY templates/ /app/templates/

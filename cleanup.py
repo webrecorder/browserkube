@@ -34,6 +34,8 @@ async def delete_jobs(k8s, cleanup_interval, callback=None):
 
         await k8s.delete_job(job.metadata.name)
 
+        await k8s.delete_service("service-" + job.metadata.name)
+
 
 # ============================================================================
 async def delete_pods(k8s, cleanup_interval):

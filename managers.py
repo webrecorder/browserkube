@@ -12,8 +12,8 @@ if os.environ.get("BROWSER"):
     print("Cluster Init")
     config.load_incluster_config()
 else:
-    #loop = asyncio.get_event_loop()
-    #loop.run_until_complete(main())
+    # loop = asyncio.get_event_loop()
+    # loop.run_until_complete(main())
     config.load_kube_config()
 
 
@@ -41,8 +41,7 @@ class K8SManager:
 
     async def delete_job(self, name):
         api_response = await self.batch_api.delete_namespaced_job(
-            name=name, namespace=self.namespace,
-            propagation_policy="Foreground",
+            name=name, namespace=self.namespace, propagation_policy="Foreground",
         )
         return api_response
 
@@ -53,11 +52,25 @@ class K8SManager:
         return api_response
 
     async def delete_pod(self, name):
-        await self.core_api.delete_namespaced_pod(pod.metadata.name, namespace="browsers")
+        await self.core_api.delete_namespaced_pod(
+            name, namespace=self.namespace
+        )
 
     async def list_jobs(self, label_selector=None):
         api_response = await self.batch_api.list_namespaced_job(
             namespace=self.namespace
+        )
+        return api_response
+
+    async def create_service(self, service):
+        api_response = await self.core_api.create_namespaced_service(
+            body=service, namespace=self.namespace
+        )
+        return api_response
+
+    async def delete_service(self, name):
+        api_response = await self.core_api.delete_namespaced_service(
+            name, namespace=self.namespace
         )
         return api_response
 

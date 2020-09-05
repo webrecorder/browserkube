@@ -56,7 +56,47 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
 
     spec:     
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+
+        - name: nginx-resolver
+          emptyDir: {}
+
+      initContainers:
+        - name: nginx-init
+          image: nginx
+          command: ["/bin/sh"]
+          args: ["-c", "echo resolver $(awk 'BEGIN{ORS=\" \"} $1==\"nameserver\" {print $2}' /etc/resolv.conf) \";\" > /etc/nginx/resolvers/resolvers.conf"]
+          volumeMounts:
+            - name: nginx-resolver
+              mountPath: /etc/nginx/resolvers/
+
       containers:
+        - name: nginx
+          image: nginx
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+
+            - name: nginx-resolver
+              mountPath: /etc/nginx/resolvers/
+              readOnly: true
+
+          resources:
+            limits:
+              cpu: 100m
+
+            requests:
+              cpu: 25m
+
         - name: main
           image: ikreymer/permaproof-main:{{ .Values.version | default "latest" }}
           imagePullPolicy: Always
@@ -66,6 +106,14 @@ spec:
 
             - secretRef:
                 name: storage-auth
+
+          resources:
+            limits:
+              cpu: 100m
+
+            requests:
+              cpu: 25m
+
 
 ---
 

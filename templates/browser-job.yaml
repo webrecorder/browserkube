@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 activeDeadlineSeconds: 600
 metadata:
-  name: "{{ job_name }}"
+  generateName: "{{ job_prefix }}"
   labels: 
     {%- for name, value in labels.items() %}
     {{ name }}: "{{ value }}"
@@ -61,9 +61,8 @@ spec:
       containers:
 
 {% if not headless %}
-        # xvfb
-        - name: xvfb
-          image: ikreymer/permaproof-xvfb
+        - name: {{ 'remote-desktop' if vnc else 'xvfb' }}
+          image: {{ 'oldwebtoday/remote-desktop-server:dev' if vnc else 'ikreymer/permaproof-xvfb' }}
           imagePullPolicy: Always
           volumeMounts:
             - name: x11
@@ -75,6 +74,16 @@ spec:
           env:
             - name: EXIT_FILE
               value: "/tmp/out/exit"
+
+            - name: VNC_PASS
+              value: "{{ annotations.vnc_pass }}"
+
+          resources:
+            limits:
+              cpu: 100m
+
+            requests:
+              cpu: 50m
 
 {% endif %}
 
