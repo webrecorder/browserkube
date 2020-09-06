@@ -45,6 +45,15 @@ ingress:
 # Advanced options
 browser: chrome:84
 
+# enable VNC for direct browser API
+vnc: False
+
+# idle timeout for reconnection when using VNC
+idle_timeout: 60
+
+# headless: must be False if using VNC
+headless: True
+
 # path to browser profile to use
 profile_url: ""
 
