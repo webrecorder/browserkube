@@ -1,14 +1,12 @@
 import os
-import aiobotocore
 import urllib.parse
 
+import aiobotocore
 from kubernetes_asyncio import client, config
-from kubernetes_asyncio.utils.create_from_yaml import create_from_yaml_single_item
-import os
 
 
 # ============================================================================
-if os.environ.get("BROWSER"):
+if os.environ.get("IN_CLUSTER"):
     print("Cluster Init")
     config.load_incluster_config()
 else:
@@ -29,8 +27,8 @@ class K8SManager:
             return await self.batch_api.read_namespaced_job(
                 name=name, namespace=self.namespace
             )
-        except Exception as e:
-            print(e)
+        except Exception as exc:
+            print(exc)
             return None
 
     async def create_job(self, job):
@@ -52,13 +50,11 @@ class K8SManager:
         return api_response
 
     async def delete_pod(self, name):
-        await self.core_api.delete_namespaced_pod(
-            name, namespace=self.namespace
-        )
+        await self.core_api.delete_namespaced_pod(name, namespace=self.namespace)
 
     async def list_jobs(self, label_selector=None):
         api_response = await self.batch_api.list_namespaced_job(
-            namespace=self.namespace
+            namespace=self.namespace, label_selector=label_selector
         )
         return api_response
 
@@ -69,10 +65,14 @@ class K8SManager:
         return api_response
 
     async def delete_service(self, name):
-        api_response = await self.core_api.delete_namespaced_service(
-            name, namespace=self.namespace
-        )
-        return api_response
+        try:
+            api_response = await self.core_api.delete_namespaced_service(
+                name, namespace=self.namespace
+            )
+            return api_response
+        except client.exceptions.ApiException as exc:
+            if exc.status != 404:
+                raise
 
 
 # ============================================================================
@@ -89,9 +89,13 @@ class StorageManager:
             endpoint_url=self.endpoint_url,
             aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
             aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        ) as s3:
+        ) as s3_client:
             parts = urllib.parse.urlsplit(url)
-            resp = await s3.delete_object(Bucket=parts.netloc, Key=parts.path[1:])
+            resp = await s3_client.delete_object(
+                Bucket=parts.netloc, Key=parts.path[1:]
+            )
+
+            return resp
 
     async def get_presigned_url(self, url, download_filename=None):
         async with self.session.create_client(
@@ -99,7 +103,7 @@ class StorageManager:
             endpoint_url=self.endpoint_url,
             aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
             aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        ) as s3:
+        ) as s3_client:
             parts = urllib.parse.urlsplit(url)
 
             params = {"Bucket": parts.netloc, "Key": parts.path[1:]}
@@ -109,7 +113,7 @@ class StorageManager:
                     "attachment; filename=" + download_filename
                 )
 
-            return await s3.generate_presigned_url(
+            return await s3_client.generate_presigned_url(
                 "get_object",
                 Params=params,
                 ExpiresIn=int(os.environ.get("JOB_CLEANUP_INTERVAL", 60)) * 60,

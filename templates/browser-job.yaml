@@ -2,8 +2,9 @@ apiVersion: batch/v1
 kind: Job
 activeDeadlineSeconds: 600
 metadata:
-  generateName: "{{ job_prefix }}"
+  name: "{{ job_name }}"
   labels: 
+    jobid: "{{ jobid }}"
     {%- for name, value in labels.items() %}
     {{ name }}: "{{ value }}"
     {%- endfor %}
@@ -20,6 +21,9 @@ spec:
 {% endif %}
   ttlSecondsAfterFinished: 120
   template:
+    metadata:
+      labels:
+        jobid: "{{ jobid }}"
     spec:
       restartPolicy: "Never"
       hostAliases:
@@ -71,43 +75,46 @@ spec:
             - name: wacz
               mountPath: '/tmp/out'
 
-          env:
-            - name: EXIT_FILE
-              value: "/tmp/out/exit"
+          envFrom:
+            - configMapRef:
+                name: browser-config
 
+          env:
             - name: VNC_PASS
               value: "{{ annotations.vnc_pass }}"
+
+            - name: REQ_ID
+              value: "{{ jobid }}"
+
+            - name: NO_AUDIO
+              value: "1"
 
           resources:
             limits:
               cpu: 100m
 
             requests:
-              cpu: 50m
+              cpu: 25m
 
 {% endif %}
 
         # browser
         # ==================================
         - name: browser
-          image: oldwebtoday/chrome:84
+          image: {{ browser_image }}
           imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: browser-config
+
           env:
+            - name: URL
+              value: "{{ start_url }}"
+
+{% if use_proxy %}
             - name: PROXY_HOST
               value: "localhost"
-
-            - name: PROXY_PORT
-              value: "8080"
-
-            - name: PROXY_CA_URL
-              value: "http://wsgiprox/download/pem"
-
-            - name: PROXY_CA_FILE
-              value: "/tmp/proxy-ca.pem"
-
-            - name: CHROME_USER_DATA_DIR
-              value: "/tmp/profile"
-              #value: "/home/browser/.config/google-chrome"
+{% endif %}
 
 {% if headless %}
             - name: HEADLESS
@@ -116,9 +123,6 @@ spec:
             - name: DISPLAY
               value: ":99"
 {% endif %}
-
-            - name: EXIT_FILE
-              value: "/tmp/out/exit"
 
           securityContext:
             capabilities: {'add': ['NET_ADMIN', 'SYS_ADMIN', 'SETUID']}
@@ -145,6 +149,8 @@ spec:
               #mountPath: '/home/browser/.config/google-chrome'
 {% endif %}
 
+
+{% if use_proxy %}
         # pywb
         # ==================================
         - name: pywb
@@ -165,10 +171,13 @@ spec:
             - name: wacz
               mountPath: '/tmp/out'
 
+{% endif %}
+
+{% if driver_image %}
         # driver
         # ==================================
         - name: driver
-          image: ikreymer/permaproof-driver:dev
+          image: {{ driver_image }}
           imagePullPolicy: Always
 
           resources:
@@ -186,34 +195,28 @@ spec:
             - secretRef:
                 name: storage-auth
 
+            - configMapRef:
+                name: browser-config
+
           env:
-            - name: BROWSER_HOST
-              value: "localhost"
-
-            - name: PROXY_HOST
-              value: "localhost"
-
-            - name: PROXY_PORT
-              value: "8080"
-
-            - name: EMBED_HOST
-              value: "embedserver"
-
-            - name: EMBED_PORT
-              value: "80"
-
             - name: CAPTURE_URL
               value: "{{ capture_url }}"
 
             - name: STORAGE_URL
               value: "{{ storage_url }}"
 
-            - name: EXIT_FILE
-              value: "/tmp/out/exit"
-
 {% if not headless %}
             - name: DISABLE_CACHE
               value: "1"
+{% endif %}
+
+{% if use_proxy %}
+            - name: PROXY_HOST
+              value: "localhost"
+{% endif %}
+
+
+
 {% endif %}
 
 

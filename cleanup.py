@@ -5,7 +5,7 @@ from managers import K8SManager, StorageManager
 
 
 # ============================================================================
-async def delete_jobs(k8s, cleanup_interval, callback=None):
+async def delete_jobs(k8s, storage, cleanup_interval):
     api_response = await k8s.list_jobs()
 
     for job in api_response.items:
@@ -20,14 +20,14 @@ async def delete_jobs(k8s, cleanup_interval, callback=None):
             print("Keeping job {0}, not old enough".format(job.metadata.name))
             continue
 
-        storageUrl = job.metadata.annotations.get("storageUrl")
-        if storageUrl:
+        storage_url = job.metadata.annotations.get("storageUrl")
+        if storage_url:
             try:
-                print("Deleting archive file: " + storageUrl)
-                await storage.delete_object(storageUrl)
+                print("Deleting archive file: " + storage_url)
+                await storage.delete_object(storage_url)
                 return True
-            except Exception as e:
-                print(e)
+            except Exception as exc:
+                print(exc)
                 return False
 
         print("Deleting job: " + job.metadata.name)
@@ -48,13 +48,11 @@ async def delete_pods(k8s, cleanup_interval):
             print("Keeping pod {0}, not old enough".format(pod.metadata.name))
             continue
 
-        await k8s.delete_pod(self.metadata.name)
+        await k8s.delete_pod(pod.metadata.name)
 
 
 # ============================================================================
 async def main():
-    minutes = os.environ.get("")
-
     storage = StorageManager()
     k8s = K8SManager()
 
@@ -64,7 +62,7 @@ async def main():
 
     print("Deleting jobs older than {0} minutes".format(cleanup_interval))
 
-    await delete_jobs(k8s, cleanup_interval)
+    await delete_jobs(k8s, storage, cleanup_interval)
     await delete_pods(k8s, cleanup_interval)
     print("Done!")
 

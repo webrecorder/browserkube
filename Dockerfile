@@ -10,8 +10,9 @@ RUN pip install -r requirements.txt
 ADD main.py /app/
 ADD cleanup.py /app/
 ADD managers.py /app/
+ADD run.sh /app/
 
-CMD uvicorn main:app --port 8080 --host 0.0.0.0
+CMD ./run.sh
 
 #COPY app.py driver/embeds.json /app/
 COPY templates/ /app/templates/

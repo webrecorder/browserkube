@@ -1,0 +1,6 @@
+[MESSAGES CONTROL]
+disable=bad-continuation,
+  missing-function-docstring,
+  missing-module-docstring,
+  missing-class-docstring,
+  broad-except

@@ -1,216 +1,322 @@
-from typing import Dict, List
+import os
+import html
+import uuid
+import asyncio
+
+import urllib.parse
+import datetime
+
+from typing import List
+
+import yaml
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import StreamingResponse, FileResponse
 
+# pylint: disable=no-name-in-module
 from pydantic import BaseModel
-
-import os
-import base64
-import yaml
-import html
-
-import urllib.parse
-import datetime
-
-import aiohttp
 
 from managers import K8SManager, StorageManager
 
 
+# ============================================================================
 class CaptureRequest(BaseModel):
+    # pylint: disable=too-few-public-methods
     urls: List[str]
     userid: str = "user"
     tag: str = ""
 
 
-app = FastAPI()
+# ============================================================================
+class MainController:
+    # pylint: disable=too-many-instance-attributes
+    def __init__(self):
+        self.app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/replay", StaticFiles(directory="replay"), name="replay")
+        self.app.mount("/static", StaticFiles(directory="static"), name="static")
+        self.app.mount("/replay", StaticFiles(directory="replay"), name="replay")
 
-templates = Jinja2Templates(directory="templates")
+        self.templates = Jinja2Templates(directory="templates")
 
-profile_url = os.environ.get("PROFILE_URL", "")
-headless = not profile_url
+        self.storage = StorageManager()
+        self.k8s = K8SManager()
 
-use_vnc = os.environ.get("VNC") and not headless
+        self.profile_url = os.environ.get("PROFILE_URL", "")
+        self.headless = os.environ.get("HEADLESS", "") == "1" and not self.profile_url
 
-access_prefix = os.environ.get("ACCESS_PREFIX")
-storage_prefix = os.environ.get("STORAGE_PREFIX")
+        self.use_vnc = os.environ.get("VNC") == "1" and not self.headless
 
-job_max_duration = int(os.environ.get("JOB_MAX_DURATION") or 0) * 60
+        self.access_prefix = os.environ.get("ACCESS_PREFIX")
+        self.storage_prefix = os.environ.get("STORAGE_PREFIX")
 
-storage = StorageManager()
-k8s = K8SManager()
+        self.job_max_duration = int(os.environ.get("JOB_MAX_DURATION") or 0) * 60
 
+        self.idle_timeout = os.environ.get("IDLE_TIMEOUT")
 
-def make_jobid():
-    return base64.b32encode(os.urandom(15)).decode("utf-8").lower()
+        self.browser_image_template = os.environ.get("BROWSER_IMAGE_TEMPL")
+        self.default_browser = os.environ.get("DEFAULT_BROWSER")
+        self.driver_image = os.environ.get("DRIVER_IMAGE")
 
+        self.job_prefix = "capture-"
+        self.service_prefix = "service-"
 
-def get_job_name(jobid, index):
-    return f"capture-{jobid}-{index}"
+        self.init_routes()
 
+    def get_job_name(self, jobid):
+        return self.job_prefix + jobid
 
-@app.get("/", response_class=HTMLResponse)
-async def read_item(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    def get_service_name(self, jobid):
+        return self.service_prefix + jobid
 
+    def init_routes(self):
+        # pylint: disable=unused-variable
 
-@app.get("/browser/{jobname}", response_class=HTMLResponse)
-async def get_browser(jobname: str, request: Request):
-    return templates.TemplateResponse(
-        "browser.html",
-        {
-            "request": request,
-            "jobname": jobname,
-            "webrtc": False,
-            "webrtc_video": False,
-        },
-    )
+        @self.app.get("/", response_class=HTMLResponse)
+        async def read_item(request: Request):
+            return self.templates.TemplateResponse("index.html", {"request": request})
 
+        @self.app.post("/captures")
+        async def start(capture: CaptureRequest):
+            return await self.start_job(capture)
 
-@app.post("/api/flock/start/{jobname}")
-async def flock_post(jobname: str, request: Request):
-    api_response = await k8s.get_job(jobname)
-    if not api_response:
-        return {"not_found": True}
+        @self.app.get("/captures")
+        async def list_jobs(userid: str = ""):
+            return await self.list_jobs(userid)
 
-    return {
-        "containers": {
-            "xserver": {
-                "ip": "service-" + jobname,
-                "ports": {"cmd-port": 6082, "vnc-port": 6080},
-                "environ": {"VNC_PASS": api_response.metadata.annotations.get("vnc_pass")},
-            }
-        }
-    }
+        @self.app.delete("/capture/{jobid}")
+        async def delete_job(jobid: str, userid: str = ""):
+            return await self.delete_job(jobid, userid)
 
+        if self.use_vnc:
 
-@app.post("/captures")
-async def start(capture: CaptureRequest):
-    return await start_job(capture)
+            @self.app.get("/attach/{jobid}", response_class=HTMLResponse)
+            async def get_browser(jobid: str, request: Request):
+                return self.render_browser(jobid, request)
 
+            @self.app.get("/view/{browser}/{url:path}", response_class=HTMLResponse)
+            async def load_browser(browser: str, url: str, request: Request):
+                return await self.load_browser(browser, url, request)
 
-@app.delete("/capture/{jobid}/{index}")
-async def delete_job(jobid: str, index: str):
-    name = get_job_name(jobid, index)
+            @self.app.post("/api/flock/start/{jobid}")
+            async def flock_post(jobid: str):
+                return await self.get_attach_data(jobid)
 
-    api_response = await k8s.get_job(name)
-    if not api_response:
-        return {"deleted": False}
+    async def start_job(self, capture: CaptureRequest):
+        jobs = []
 
-    storage_url = api_response.metadata.annotations.get("storageUrl")
-    if storage_url:
-        await storage.delete_object(storage_url)
+        for url in capture.urls:
+            jobid = str(uuid.uuid4())
 
-    api_response = await k8s.delete_job(name)
+            filename = f"{ jobid }.wacz"
+            storage_url = self.storage_prefix + filename
 
-    api_response = await k8s.delete_service("service-" + name)
+            try:
+                download_filename = (
+                    urllib.parse.urlsplit(url).netloc
+                    + "-"
+                    + str(datetime.datetime.utcnow())[:10]
+                    + ".wacz"
+                )
+            except Exception as exc:
+                print("Error Creating Download Filename", exc)
+                download_filename = None
 
-    return {"deleted": True}
-
-
-@app.get("/captures")
-async def list_jobs(jobid: str = "", userid: str = "", index: int = -1):
-    label_selector = []
-    if jobid:
-        label_selector.append(f"jobid={jobid}")
-
-    if userid:
-        label_selector.append(f"userid={userid}")
-
-    if index >= 0:
-        label_selector.append(f"index={index}")
-
-    api_response = await k8s.list_jobs(label_selector == ",".join(label_selector))
-
-    jobs = []
-
-    for job in api_response.items:
-        data = job.metadata.labels
-        data["captureUrl"] = job.metadata.annotations["captureUrl"]
-        data["userTag"] = job.metadata.annotations["userTag"]
-        data["startTime"] = job.status.start_time
-
-        if job.status.active:
-            data["status"] = "In progress"
-        elif job.status.failed:
-            data["status"] = "Failed"
-        elif job.status.succeeded:
-            data["status"] = "Complete"
-            data["accessUrl"] = html.unescape(job.metadata.annotations["accessUrl"])
-        else:
-            data["status"] = "Unknown"
-
-        jobs.append(data)
-
-    return {"jobs": jobs}
-
-
-async def start_job(capture: CaptureRequest):
-    jobid = make_jobid()
-
-    index = 0
-    for url in capture.urls:
-        job_name = get_job_name(jobid, index)
-
-        filename = f"{ jobid }/{ index }.wacz"
-        storage_url = storage_prefix + filename
-
-        try:
-            download_filename = (
-                urllib.parse.urlsplit(url).netloc
-                + "-"
-                + str(datetime.datetime.utcnow())[:10]
-                + ".wacz"
+            access_url = await self.storage.get_presigned_url(
+                storage_url, download_filename
             )
-        except:
-            download_filename = None
 
-        access_url = await storage.get_presigned_url(storage_url, download_filename)
+            jobs.append(
+                self.init_browser_job(
+                    browser=self.default_browser,
+                    capture_url=url,
+                    storage_url=storage_url,
+                    access_url=access_url,
+                    profile_url=self.profile_url,
+                    userid=capture.userid,
+                    driver_image=self.driver_image,
+                    use_proxy=True,
+                    job_max_duration=self.job_max_duration,
+                    tag=capture.tag,
+                )
+            )
 
-        labels = {"userid": capture.userid, "jobid": jobid, "index": index}
+        job_ids = await asyncio.gather(*jobs)
+
+        return {"urls": len(jobs), "jobids": job_ids}
+
+    async def list_jobs(self, userid: str = ""):
+        label_selector = []
+        if userid:
+            label_selector.append(f"userid={userid}")
+
+        api_response = await self.k8s.list_jobs(label_selector=",".join(label_selector))
+
+        jobs = []
+
+        for job in api_response.items:
+            data = job.metadata.labels
+            data["captureUrl"] = job.metadata.annotations["captureUrl"]
+            data["userTag"] = job.metadata.annotations["userTag"]
+            data["startTime"] = job.status.start_time
+            if job.status.completion_time:
+                data["elapsedTime"] = job.status.completion_time
+            else:
+                data["elapsedTime"] = (
+                    str(datetime.datetime.utcnow().isoformat())[:19] + "Z"
+                )
+
+            if job.status.active:
+                data["status"] = "In progress"
+            elif job.status.failed:
+                data["status"] = "Failed"
+            elif job.status.succeeded:
+                data["status"] = "Complete"
+                data["accessUrl"] = html.unescape(job.metadata.annotations["accessUrl"])
+            else:
+                data["status"] = "Unknown"
+
+            jobs.append(data)
+
+        return {"jobs": jobs}
+
+    async def delete_job(self, jobid: str, userid: str = ""):
+        api_response = await self.k8s.get_job(self.get_job_name(jobid))
+
+        if userid and api_response.metadata.labels.get("userid") != userid:
+            return {"deleted": False}
+
+        if not api_response:
+            return {"deleted": False}
+
+        storage_url = api_response.metadata.annotations.get("storageUrl")
+        if storage_url:
+            await self.storage.delete_object(storage_url)
+
+        api_response = await self.k8s.delete_job(self.get_job_name(jobid))
+
+        api_response = await self.k8s.delete_service(self.get_service_name(jobid))
+
+        return {"deleted": True}
+
+    async def load_browser(self, browser: str, url: str, request: Request):
+        if request.url.query:
+            url += "?" + request.url.query
+
+        jobid = await self.init_browser_job(
+            browser=browser,
+            capture_url=url,
+            use_proxy=False,
+            job_max_duration=self.job_max_duration,
+            idle_timeout=self.idle_timeout,
+        )
+
+        return self.render_browser(jobid, request)
+
+    async def init_browser_job(
+        self,
+        browser: str,
+        capture_url: str,
+        storage_url: str = "",
+        access_url: str = "",
+        start_url: str = "",
+        profile_url: str = "",
+        userid: str = "",
+        driver_image: str = "",
+        use_proxy: bool = False,
+        job_max_duration: int = 0,
+        idle_timeout: int = 0,
+        tag: str = "",
+    ):
+        # pylint: disable=too-many-arguments,too-many-locals
+        browser_image = self.browser_image_template.format(browser)
+
+        if not start_url:
+            start_url = capture_url if not driver_image else "about:blank"
+
+        if not idle_timeout:
+            idle_timeout = ""
+
+        labels = {"userid": userid}
 
         annotations = {
-            "userTag": capture.tag,
-            "accessUrl": access_url,
-            "captureUrl": url,
+            "userTag": tag,
+            "captureUrl": capture_url,
             "storageUrl": storage_url,
-            "vnc_pass": make_jobid()
+            "accessUrl": access_url,
         }
 
-        data = templates.env.get_template("browser-job.yaml").render(
+        jobid = str(uuid.uuid4())
+
+        if self.use_vnc:
+            annotations["vnc_pass"] = (str(uuid.uuid4()),)
+
+        data = self.templates.env.get_template("browser-job.yaml").render(
             {
-                "job_name": job_name,
+                "job_name": self.get_job_name(jobid),
+                "jobid": jobid,
                 "labels": labels,
                 "annotations": annotations,
-                "capture_url": url,
+                "start_url": start_url,
+                "capture_url": capture_url,
                 "storage_url": storage_url,
                 "profile_url": profile_url,
-                "headless": headless,
-                "vnc": use_vnc,
+                "headless": self.headless,
+                "vnc": self.use_vnc,
+                "use_proxy": use_proxy,
+                "browser_image": browser_image,
+                "driver_image": driver_image,
                 "job_max_duration": job_max_duration,
+                "idle_timeout": idle_timeout,
             }
         )
 
         job = yaml.safe_load(data)
 
-        res = await k8s.create_job(job)
+        await self.k8s.create_job(job)
 
-        if use_vnc:
-            data = templates.env.get_template("browser-service.yaml").render(
-                {"job_name": job_name}
+        if self.use_vnc:
+            data = self.templates.env.get_template("browser-service.yaml").render(
+                {"service_name": self.get_service_name(jobid), "jobid": jobid}
             )
 
             service = yaml.safe_load(data)
 
-            res = await k8s.create_service(service)
+            await self.k8s.create_service(service)
 
-        index += 1
+        return jobid
 
-    return {"jobid": jobid, "urls": index}
+    async def get_attach_data(self, jobid):
+        print("Getting job: " + self.get_job_name(jobid))
+        api_response = await self.k8s.get_job(self.get_job_name(jobid))
+        if not api_response:
+            return {"not_found": True}
+
+        name = self.get_service_name(jobid)
+        password = api_response.metadata.annotations.get("vnc_pass")
+
+        return {
+            "containers": {
+                "xserver": {
+                    "ip": name,
+                    "ports": {"cmd-port": 6082, "vnc-port": 6080},
+                    "environ": {"VNC_PASS": password},
+                }
+            }
+        }
+
+    def render_browser(self, jobid, request):
+        return self.templates.TemplateResponse(
+            "browser.html",
+            {
+                "request": request,
+                "jobid": jobid,
+                "webrtc": False,
+                "webrtc_video": False,
+            },
+        )
+
+
+# ============================================================================
+app = MainController().app

@@ -55,7 +55,8 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
 
-    spec:     
+    spec:
+{{- if .Values.vnc }}
       volumes:
         - name: nginx-conf
           configMap:
@@ -75,8 +76,9 @@ spec:
           volumeMounts:
             - name: nginx-resolver
               mountPath: /etc/nginx/resolvers/
-
+{{- end }}
       containers:
+{{- if .Values.vnc }}
         - name: nginx
           image: nginx
           imagePullPolicy: IfNotPresent
@@ -96,7 +98,7 @@ spec:
 
             requests:
               cpu: 25m
-
+{{- end }}
         - name: main
           image: ikreymer/permaproof-main:{{ .Values.version | default "latest" }}
           imagePullPolicy: Always

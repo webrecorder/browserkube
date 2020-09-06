@@ -3,15 +3,39 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Values.name }}-config
+  namespace: default
 
 data:
-  BROWSER: {{ .Values.browser }}
-  ACCESS_PREFIX: {{ .Values.storage.access_prefix }}
-  STORAGE_PREFIX: {{ .Values.storage.storage_prefix }}
+  DRIVER_IMAGE: "ikreymer/permaproof-driver:dev"
+  BROWSER_IMAGE_TEMPL: "oldwebtoday/{0}"
+  DEFAULT_BROWSER: "{{ .Values.browser }}"
+  IN_CLUSTER: "1"
+
+  HEADLESS: "{{ .Values.headless | default true | ternary 1 0 }}"
+  ACCESS_PREFIX: "{{ .Values.storage.access_prefix }}"
+  STORAGE_PREFIX: "{{ .Values.storage.storage_prefix }}"
   PROFILE_URL: "{{ .Values.profile_url | default "" }}"
   JOB_CLEANUP_INTERVAL: "{{ .Values.job_cleanup_interval }}"
   JOB_MAX_DURATION: "{{ .Values.job_max_duration }}"
-  VNC: "{{ .Values.vnc | default "" }}"
+  VNC: "{{ .Values.vnc | default false | ternary 1 0 }}"
+  PORT: "{{ .Values.vnc | default false | ternary 8080 80 }}"
+  IDLE_TIMEOUT: "{{ .Values.idle_timeout }}"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: browser-config
+  namespace: browsers
+
+data:
+  BROWSER_HOST: "localhost"
+  PROXY_PORT: "8080"
+  PROXY_CA_URL: "http://wsgiprox/download/pem"
+  PROXY_CA_FILE: "/tmp/proxy-ca.pem"
+  CHROME_USER_DATA_DIR: "/tmp/profile"
+  EXIT_FILE: "/tmp/out/exit"
+ 
 
 ---
 apiVersion: v1
@@ -38,6 +62,8 @@ stringData:
   AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
   AWS_SECRET_ACCESS_KEY: "{{ .Values.storage.secret_key }}"
   AWS_ENDPOINT: "{{ .Values.storage.api_endpoint }}"
+
+{{- if .Values.vnc | default false }}
 
 ---
 apiVersion: v1
@@ -93,14 +119,16 @@ data:
             }
 
             location /_websockify {
+                #proxy_pass http://$arg_ip:$arg_port/websockify;
                 proxy_pass http://$arg_ip.browsers.svc.cluster.local:$arg_port/websockify;
 
                 proxy_set_header Host $host;
                 proxy_set_header X-Forwarded-Proto $scheme;
                 proxy_set_header X-Real-IP $remote_addr;
 
+                proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
+                proxy_set_header Connection $http_connection;
 
                 proxy_read_timeout 3600s;
                 proxy_send_timeout 3600s;
@@ -111,3 +139,5 @@ data:
             }
         }
     }
+
+{{ end }}
