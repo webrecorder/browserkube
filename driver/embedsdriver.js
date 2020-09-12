@@ -16,8 +16,10 @@ class EmbedDriver extends Driver
 {
   constructor(...args) {
     super(...args);
-    this.embedPort = Number(process.env.EMBED_PORT || 3000);
-    this.embedHost = process.env.EMBED_HOST || "localhost";
+    this.embedPort = Number(process.env.EMBED_PORT || 80);
+    this.embedHost = process.env.EMBED_HOST || "embedserver";
+
+    this.embedPrefix = (this.embedPort === 80 ? `http://${this.embedHost}` : `http://${this.embedHost}:${this.embedPort}`);
 
     this.embedWidth = null;
     this.embedHeight = null;
@@ -146,44 +148,52 @@ class EmbedDriver extends Driver
     new Promise(() => this.app.listen(this.embedPort));
   }
 
-  async runCapture(page) {
-    //const embedPrefix = (this.embedPort === 80 ? `http://${this.embedHost}` : `http://${this.embedHost}:${this.embedPort}`);
-  
+  async runCapture(page) {  
     setStatus("Getting Embed Info...");
   
-    //try {
-    //  await page.goto(`${embedPrefix}/info/${url}`);
-    //} catch (e) {
-    //console.log(e);
-    //}
-  
-    if (this.proxyHost) {
-      const captureRes = await fetch(`${this.proxyOrigin}/capture/record/mp_/${this.embedPrefix}/info/${this.captureUrl}`);
-  
-      if (captureRes.status != 200) {
-        this.errored = "invalid_embed";
-        return;
+    const oembed = await this.getOembed(this.captureUrl);
+    
+    if (oembed && oembed.html) {
+      if (this.proxyHost) {
+        const captureRes = await fetch(`${this.proxyOrigin}/capture/record/mp_/${this.embedPrefix}/info/${this.captureUrl}`);
+    
+        if (captureRes.status != 200) {
+          this.errored = "invalid_embed";
+          return;
+        }
       }
-    }
-  
-    this.embedUrl = `${this.embedPrefix}/e/${this.captureUrl}`;
+    
+      this.embedUrl = `${this.embedPrefix}/e/${this.captureUrl}`;
 
-    this.entryUrl = this.embedUrl;
+      this.entryUrl = this.embedUrl;
+    
+      setStatus("Loading Embed: " + this.embedUrl);
+    
+      await page.goto(this.embedUrl, {"waitUntil": "networkidle0"});
+    
+      await utils.sleep(100);
+      //const computeWidth = await page.evaluate(() => document.querySelector("body").firstElementChild.scrollWidth);
+    
+      setStatus("Running Behavior...");
   
-    setStatus("Loading Embed...");
-  
-    await page.goto(this.embedUrl, {"waitUntil": "networkidle0"});
-  
-    await utils.sleep(100);
-    //const computeWidth = await page.evaluate(() => document.querySelector("body").firstElementChild.scrollWidth);
-  
-    setStatus("Running Behavior...");
-  
-    try {
-      await this.runBehavior(page, this.captureUrl);
-    } catch (e) {
-      console.warn(e);
+      try {
+        await this.runBehavior(page, this.captureUrl);
+      } catch (e) {
+        console.warn(e);
+      }
+    } else {
+      console.log("Not a known embed, skipping embed");
+
+      //await super.runCapture(page);
     }
+
+    //await page.mouse.click(20, 20);
+
+    console.log("Capturing regular page");
+
+    await super.runCapture(page);
+
+    //this.entryUrl = this.embedUrl;
   }
 
   async runBehavior(page, url) {

@@ -190,11 +190,13 @@ class Driver
 
     setStatus("Finishing Capture...");
 
-    if (this.proxyHost) {
-      await Promise.race([this.waitFileDone(`${this.proxyOrigin}/api/pending`), utils.sleep(15000)])
-    }
+    let res = 0;
 
-    const res = await this.commitWacz(this.entryUrl || this.captureUrl);
+    if (this.proxyHost) {
+      await Promise.race([this.waitFileDone(`${this.proxyOrigin}/api/pending`), utils.sleep(15000)]);
+
+      res = await this.commitWacz(this.entryUrl || this.captureUrl);
+    }
 
     try {
       await fetch(`${this.proxyOrigin}/api/exit`);

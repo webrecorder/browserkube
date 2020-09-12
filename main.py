@@ -27,6 +27,7 @@ class CaptureRequest(BaseModel):
     urls: List[str]
     userid: str = "user"
     tag: str = ""
+    embeds: bool = False
 
 
 # ============================================================================
@@ -106,6 +107,8 @@ class MainController:
     async def start_job(self, capture: CaptureRequest):
         jobs = []
 
+        print('EMBEDS', capture.embeds)
+
         for url in capture.urls:
             jobid = str(uuid.uuid4())
 
@@ -139,6 +142,7 @@ class MainController:
                     use_proxy=True,
                     job_max_duration=self.job_max_duration,
                     tag=capture.tag,
+                    use_embeds=capture.embeds,
                 )
             )
 
@@ -160,6 +164,9 @@ class MainController:
             data["captureUrl"] = job.metadata.annotations["captureUrl"]
             data["userTag"] = job.metadata.annotations["userTag"]
             data["startTime"] = job.status.start_time
+            if job.metadata.annotations.get("useEmbeds") == "1":
+                data["useEmbeds"] = True
+
             if job.status.completion_time:
                 data["elapsedTime"] = job.status.completion_time
             else:
@@ -228,6 +235,7 @@ class MainController:
         job_max_duration: int = 0,
         idle_timeout: int = 0,
         tag: str = "",
+        use_embeds: bool = False
     ):
         # pylint: disable=too-many-arguments,too-many-locals
         browser_image = self.browser_image_template.format(browser)
@@ -246,6 +254,9 @@ class MainController:
             "storageUrl": storage_url,
             "accessUrl": access_url,
         }
+
+        if use_embeds:
+            annotations['useEmbeds'] = "1"
 
         jobid = str(uuid.uuid4())
 
@@ -269,6 +280,7 @@ class MainController:
                 "driver_image": driver_image,
                 "job_max_duration": job_max_duration,
                 "idle_timeout": idle_timeout,
+                "use_embeds": use_embeds
             }
         )
 

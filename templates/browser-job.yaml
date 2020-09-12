@@ -205,6 +205,11 @@ spec:
             - name: STORAGE_URL
               value: "{{ storage_url }}"
 
+{% if use_embeds %}
+            - name: EMBEDS
+              value: "1"
+{% endif %}
+
 {% if not headless %}
             - name: DISABLE_CACHE
               value: "1"
