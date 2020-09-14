@@ -1,10 +1,14 @@
 version: '3.3'
 
 services:
-    main:
-        image: ikreymer/permaproof-main
+    browserkube:
+        image: webrecorder/browserkube
         build: ./
 
-        ports:
-          - 7030:7030
+    pywb:
+        image: webrecorder/browserkube-pywb
+        build: ./pywb/
 
+    xvfb:
+        image: webrecorder/browserkube-xvfb
+        build: ./xvfb

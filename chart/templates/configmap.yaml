@@ -2,34 +2,27 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.name }}-config
+  name: {{ .Values.name }}-env-config
   namespace: {{ .Release.Namespace }}
 
 data:
-  BROWSER_NAMESPACE: "{{ .Values.browser_namespace }}"
-  DRIVER_IMAGE: "ikreymer/permaproof-driver:dev"
+  BROWSER_NAMESPACE: {{ .Values.browser_namespace | default "browsers" }}
   BROWSER_IMAGE_TEMPL: "oldwebtoday/{0}"
-  DEFAULT_BROWSER: "{{ .Values.browser }}"
+
+  DEFAULT_BROWSER: {{ .Values.browser_image | default "chrome:84" }}
   IN_CLUSTER: "1"
 
-  HEADLESS: "{{ .Values.headless | ternary 1 0 }}"
-{{- if .Values.storage }}
-  ACCESS_PREFIX: "{{ .Values.storage.access_prefix }}"
-  STORAGE_PREFIX: "{{ .Values.storage.storage_prefix }}"
-{{- end }}
-  PROFILE_URL: "{{ .Values.profile_url | default "" }}"
+  JOB_ENV: "/tmp/job-env.yaml"
+
   JOB_CLEANUP_INTERVAL: "{{ .Values.job_cleanup_interval }}"
-  JOB_MAX_DURATION: "{{ .Values.job_max_duration }}"
-  VNC: "{{ .Values.vnc | default false | ternary 1 0 }}"
-  PORT: "{{ .Values.vnc | default false | ternary 8080 80 }}"
-  IDLE_TIMEOUT: "{{ .Values.idle_timeout }}"
+  PORT: "{{ or (default false .Values.enable_vnc) (default false .Values.remote_cdp) | ternary 8080 80 }}"
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: browser-config
-  namespace: "{{ .Values.browser_namespace }}"
+  namespace: {{ .Values.browser_namespace | default "browsers" }}
 
 data:
   BROWSER_HOST: "localhost"
@@ -46,7 +39,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: storage-auth
-  namespace: "{{ .Values.browser_namespace }}"
+  namespace: {{ .Values.browser_namespace | default "browsers" }}
 type: Opaque
 stringData:
   AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
@@ -69,15 +62,47 @@ stringData:
 
 {{- end }}
 
-{{- if .Values.vnc | default false }}
-
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-conf
+  name: data-config
   namespace: {{ .Release.Namespace }}
 data:
+  job-env.yaml: |
+    config:
+      driver_image: {{ .Values.driver_image | default ""}} 
+      pywb_image: {{ .Values.pywb_image | default "webrecorder/browserkube-pywb" }}
+      xvfb_image: {{ .Values.xvfb_image | default "webrecorder/browserkube-xvfb" }}
+      vnc_image: {{ .Values.vnc_image | default "oldwebtoday/remote-desktop-server:dev" }}
+
+      job_max_duration:  "{{ mul .Values.job_max_duration 60}}"
+
+      mode: {{ .Values.browser_mode | default "headless" | quote }}
+
+      remote_cdp: {{ .Values.remote_cdp | default false }}
+
+      profile_url: "{{ .Values.profile_url | default "" }}"
+
+      enable_vnc: {{ .Values.enable_vnc | default false }}
+
+      idle_timeout: "{{ .Values.idle_timeout }}"
+
+      {{- if .Values.storage }}
+      storage_prefix: "{{ .Values.storage.storage_prefix }}"
+      {{- end }}
+
+
+      {{- if .Values.profile_urls }}
+      profile_urls:
+      {{- range .Values.profile_urls }}
+        - match: {{ .match | quote }}
+          url: {{ .url | quote }}
+      {{- end }}
+      {{- end }}
+
+
+  {{- if or .Values.enable_vnc .Values.remote_cdp }}
   nginx.conf: |
     worker_processes  1;
 
@@ -124,8 +149,9 @@ data:
                 root /usr/share/nginx/html;
             }
 
-            location ~* /cdp/([^/]+)/(.*) {
-                proxy_pass http://service-$1.browsers.svc.cluster.local:9222/$2;
+            {{- if .Values.remote_cdp }}
+            location ~* /cdp/([^/]+)/([^/]+)/(.*) {
+                proxy_pass http://service-$1.browsers.svc.cluster.local:$2/$3;
 
                 proxy_set_header Host "localhost";
 
@@ -136,8 +162,10 @@ data:
                 #proxy_read_timeout 3600s;
                 #proxy_send_timeout 3600s;
             }
+            {{- end }}
  
 
+            {{- if .Values.enable_vnc }}
             location /_websockify {
                 #proxy_pass http://$arg_ip:$arg_port/websockify;
                 proxy_pass http://$arg_ip.browsers.svc.cluster.local:$arg_port/websockify;
@@ -153,11 +181,11 @@ data:
                 proxy_read_timeout 3600s;
                 proxy_send_timeout 3600s;
             }
+            {{- end }}
 
             location / {
                 proxy_pass http://localhost:8080/;
             }
         }
     }
-
-{{ end }}
+    {{ end }}

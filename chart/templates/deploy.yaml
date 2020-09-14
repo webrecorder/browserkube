@@ -19,7 +19,7 @@ spec:
           restartPolicy: Never
           containers:
           - name: cleanup
-            image: ikreymer/permaproof-main:{{ .Values.version | default "latest" }}
+            image: {{ .Values.main_image | default "webrecorder/browserkube" }}
             imagePullPolicy: Always
             command: ["python", "cleanup.py"]
             envFrom:
@@ -29,7 +29,7 @@ spec:
             {{- end }}
 
               - configMapRef:
-                  name: {{ .Values.name }}-config
+                  name: {{ .Values.name }}-env-config
 
             resources:
               limits:
@@ -58,12 +58,15 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
 
     spec:
-{{- if .Values.vnc }}
       volumes:
-        - name: nginx-conf
+        - name: data-config
           configMap:
-            name: nginx-conf
+            name: data-config
             items:
+              - key: job-env.yaml
+                path: job-env.yaml
+
+{{- if or .Values.enable_vnc .Values.remote_cdp }}
               - key: nginx.conf
                 path: nginx.conf
 
@@ -80,12 +83,12 @@ spec:
               mountPath: /etc/nginx/resolvers/
 {{- end }}
       containers:
-{{- if .Values.vnc }}
+{{- if or .Values.enable_vnc .Values.remote_cdp }}
         - name: nginx
           image: nginx
           imagePullPolicy: IfNotPresent
           volumeMounts:
-            - name: nginx-conf
+            - name: data-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
               readOnly: true
@@ -102,16 +105,22 @@ spec:
               cpu: 25m
 {{- end }}
         - name: main
-          image: ikreymer/permaproof-main:{{ .Values.version | default "latest" }}
+          image: {{ .Values.main_image | default "webrecorder/browserkube" }}
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
-                name: {{ .Values.name }}-config
+                name: {{ .Values.name }}-env-config
 
           {{- if .Values.storage }}
             - secretRef:
                 name: storage-auth
           {{- end }}
+
+          volumeMounts:
+            - name: data-config
+              mountPath: /tmp/job-env.yaml
+              subPath: job-env.yaml
+              readOnly: true
 
           resources:
             limits:

@@ -26,7 +26,11 @@ job_max_duration: "10"
 # num replicas for api backend
 num_backend_replicas: "2"
 
-name: dev
+# application
+name: browserkube
+
+# docker image tag version
+version: latest
 
 # optional: if 'host' is set, a publicly accessible Ingress controller is created with an SSL cert (using letsencrypt)
 ingress:
@@ -43,7 +47,8 @@ ingress:
 #  type: LoadBalancer
 
 # Advanced options
-browser: chrome:84
+browser:
+  image: chrome:84
 
 # enable VNC for direct browser API
 vnc: False

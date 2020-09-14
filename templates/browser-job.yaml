@@ -39,7 +39,7 @@ spec:
           emptyDir:
             medium: Memory
 
-{% if not headless %}
+{% if mode != "headless" %}
         - name: x11
           emptyDir: {}
 {% endif %}
@@ -68,9 +68,9 @@ spec:
 
       containers:
 
-{% if not headless %}
-        - name: {{ 'remote-desktop' if vnc else 'xvfb' }}
-          image: {{ 'oldwebtoday/remote-desktop-server:dev' if vnc else 'ikreymer/permaproof-xvfb' }}
+{% if mode != "headless" %}
+        - name: {{ mode }}
+          image: {{ vnc_image if mode == "vnc" else xvfb_image }}
           imagePullPolicy: Always
           volumeMounts:
             - name: x11
@@ -120,7 +120,7 @@ spec:
               value: "localhost"
 {% endif %}
 
-{% if headless %}
+{% if mode == "headless" %}
             - name: HEADLESS
               value: "1"
 {% else %}
@@ -145,7 +145,7 @@ spec:
             - name: dshm
               mountPath: '/dev/shm'
 
-{% if not headless %}
+{% if mode != "headless" %}
             - name: x11
               mountPath: '/tmp/.X11-unix/'
 {% endif %}
@@ -161,7 +161,7 @@ spec:
         # pywb
         # ==================================
         - name: pywb
-          image: ikreymer/permaproof-pywb
+          image: webrecorder/browserkube-pywb
           imagePullPolicy: Always
           env:
             - name: INIT_COLLECTION
@@ -199,7 +199,7 @@ spec:
               mountPath: '/tmp/out'
 
           envFrom:
-            {%- if use_storage %}
+            {%- if storage_prefix %}
             - secretRef:
                 name: storage-auth
             {% endif %}

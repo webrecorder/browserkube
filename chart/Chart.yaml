@@ -1,6 +1,6 @@
 apiVersion: v2
-name: permaproof
-description: A Helm chart for Kubernetes
+name: browserkube
+description: A chart for running the Webrecorder Remote Browser System
 
 # A chart can be either an 'application' or a 'library' chart.
 #

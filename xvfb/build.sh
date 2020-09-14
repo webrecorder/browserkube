@@ -1,5 +1,5 @@
 #!/bin/bash
 DIR=$( dirname "${BASH_SOURCE[0]}" )
 echo $DIR
-docker build -t ikreymer/permaproof-xvfb $DIR
+docker build -t webrecorder/browserkube-xvfb $DIR
 
