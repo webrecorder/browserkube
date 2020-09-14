@@ -35,6 +35,10 @@ spec:
         - name: wacz
           emptyDir: {}
 
+        - name: dshm
+          emptyDir:
+            medium: Memory
+
 {% if not headless %}
         - name: x11
           emptyDir: {}
@@ -138,6 +142,9 @@ spec:
             - name: wacz
               mountPath: '/tmp/out'
 
+            - name: dshm
+              mountPath: '/dev/shm'
+
 {% if not headless %}
             - name: x11
               mountPath: '/tmp/.X11-unix/'
@@ -192,28 +199,19 @@ spec:
               mountPath: '/tmp/out'
 
           envFrom:
+            {%- if use_storage %}
             - secretRef:
                 name: storage-auth
+            {% endif %}
 
             - configMapRef:
                 name: browser-config
 
           env:
-            - name: CAPTURE_URL
-              value: "{{ capture_url }}"
-
-            - name: STORAGE_URL
-              value: "{{ storage_url }}"
-
-{% if use_embeds %}
-            - name: EMBEDS
-              value: "1"
-{% endif %}
-
-{% if not headless %}
-            - name: DISABLE_CACHE
-              value: "1"
-{% endif %}
+            {%- for name, value in driver_env.items() %}
+            - name: {{ name }}
+              value: "{{ value }}"
+            {%- endfor %}
 
 {% if use_proxy %}
             - name: PROXY_HOST

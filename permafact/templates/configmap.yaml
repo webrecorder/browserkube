@@ -3,17 +3,20 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Values.name }}-config
-  namespace: default
+  namespace: {{ .Release.Namespace }}
 
 data:
+  BROWSER_NAMESPACE: "{{ .Values.browser_namespace }}"
   DRIVER_IMAGE: "ikreymer/permaproof-driver:dev"
   BROWSER_IMAGE_TEMPL: "oldwebtoday/{0}"
   DEFAULT_BROWSER: "{{ .Values.browser }}"
   IN_CLUSTER: "1"
 
-  HEADLESS: "{{ .Values.headless | default true | ternary 1 0 }}"
+  HEADLESS: "{{ .Values.headless | ternary 1 0 }}"
+{{- if .Values.storage }}
   ACCESS_PREFIX: "{{ .Values.storage.access_prefix }}"
   STORAGE_PREFIX: "{{ .Values.storage.storage_prefix }}"
+{{- end }}
   PROFILE_URL: "{{ .Values.profile_url | default "" }}"
   JOB_CLEANUP_INTERVAL: "{{ .Values.job_cleanup_interval }}"
   JOB_MAX_DURATION: "{{ .Values.job_max_duration }}"
@@ -26,7 +29,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: browser-config
-  namespace: browsers
+  namespace: "{{ .Values.browser_namespace }}"
 
 data:
   BROWSER_HOST: "localhost"
@@ -37,12 +40,13 @@ data:
   EXIT_FILE: "/tmp/out/exit"
  
 
+{{- if .Values.storage }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: storage-auth
-  namespace: browsers
+  namespace: "{{ .Values.browser_namespace }}"
 type: Opaque
 stringData:
   AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
@@ -56,12 +60,14 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: storage-auth
-  namespace: default
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 stringData:
   AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
   AWS_SECRET_ACCESS_KEY: "{{ .Values.storage.secret_key }}"
   AWS_ENDPOINT: "{{ .Values.storage.api_endpoint }}"
+
+{{- end }}
 
 {{- if .Values.vnc | default false }}
 
@@ -70,7 +76,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nginx-conf
-  namespace: default
+  namespace: {{ .Release.Namespace }}
 data:
   nginx.conf: |
     worker_processes  1;
@@ -117,6 +123,20 @@ data:
             location = /50x.html {
                 root /usr/share/nginx/html;
             }
+
+            location ~* /cdp/([^/]+)/(.*) {
+                proxy_pass http://service-$1.browsers.svc.cluster.local:9222/$2;
+
+                proxy_set_header Host "localhost";
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection $http_connection;
+
+                #proxy_read_timeout 3600s;
+                #proxy_send_timeout 3600s;
+            }
+ 
 
             location /_websockify {
                 #proxy_pass http://$arg_ip:$arg_port/websockify;

@@ -15,9 +15,12 @@ else:
     config.load_kube_config()
 
 
+DEFAULT_NAMESPACE = os.environ.get("BROWSER_NAMESPACE") or "browsers"
+
+
 # ============================================================================
 class K8SManager:
-    def __init__(self, namespace="browsers"):
+    def __init__(self, namespace=DEFAULT_NAMESPACE):
         self.core_api = client.CoreV1Api()
         self.batch_api = client.BatchV1Api()
         self.namespace = namespace
