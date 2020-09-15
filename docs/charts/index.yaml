@@ -3,12 +3,12 @@ entries:
   browserkube:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2020-09-15T10:21:46.603482-07:00"
+    created: "2020-09-15T10:31:23.612255-07:00"
     description: A chart for running the Webrecorder Remote Browser System
-    digest: 77fcdf0a3f0f27593d0db4794e2e4748c793a4079371223df8a7252782b53f06
+    digest: 19c2bd10ceb6951a2ba1f848bea27edc6276d1278fa13d75f80bdcd1dccfe6ce
     name: browserkube
     type: application
     urls:
-    - browserkube-0.1.0.tgz
+    - https://webrecorder.github.io/browserkube/charts/browserkube-0.1.0.tgz
     version: 0.1.0
-generated: "2020-09-15T10:21:46.603036-07:00"
+generated: "2020-09-15T10:31:23.611788-07:00"

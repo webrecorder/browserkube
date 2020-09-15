@@ -6,6 +6,6 @@ mkdir -p docs/charts
 cd $DIR/docs/charts
 
 helm package $DIR/chart
-helm repo index .
+helm repo index . --url https://webrecorder.github.io/browserkube/charts
 
 
