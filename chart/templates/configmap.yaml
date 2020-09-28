@@ -76,7 +76,7 @@ data:
       xvfb_image: {{ .Values.xvfb_image | default "webrecorder/browserkube-xvfb" }}
       vnc_image: {{ .Values.vnc_image | default "oldwebtoday/remote-desktop-server:dev" }}
 
-      job_max_duration:  "{{ mul .Values.job_max_duration 60}}"
+      job_max_duration:  {{ mul .Values.job_max_duration 60}}
 
       mode: {{ .Values.browser_mode | default "headless" | quote }}
 
@@ -86,7 +86,7 @@ data:
 
       enable_vnc: {{ .Values.enable_vnc | default false }}
 
-      idle_timeout: "{{ .Values.idle_timeout }}"
+      idle_timeout: {{ .Values.idle_timeout | default "" }}
 
       {{- if .Values.storage }}
       storage_prefix: "{{ .Values.storage.storage_prefix }}"

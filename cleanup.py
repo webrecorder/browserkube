@@ -8,9 +8,12 @@ from managers import K8SManager, StorageManager
 async def delete_jobs(k8s, storage, cleanup_interval):
     api_response = await k8s.list_jobs()
 
+    print('Total Jobs', len(api_response.items))
+
     for job in api_response.items:
-        if job.status.succeeded != 1:
-            continue
+        #if job.status.succeeded != 1:
+        #    print('Skipping non-succeeded job {0}'.format(job.metadata.name))
+        #    continue
 
         duration = datetime.datetime.utcnow() - job.status.start_time.replace(
             tzinfo=None
@@ -25,10 +28,9 @@ async def delete_jobs(k8s, storage, cleanup_interval):
             try:
                 print("Deleting archive file: " + storage_url)
                 await storage.delete_object(storage_url)
-                return True
             except Exception as exc:
+                print("Delete failed")
                 print(exc)
-                return False
 
         print("Deleting job: " + job.metadata.name)
 

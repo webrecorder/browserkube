@@ -1,29 +1,31 @@
 ---
-kind: ClusterRole
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  namespace: default
+  namespace: {{ .Values.browser_namespace | default "browsers" }}
   name: browser-run
 rules:
 - apiGroups: [""]
   resources: ["pods", "services"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
 - apiGroups: ["batch", "extensions"]
   resources: ["jobs"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
 ---
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: browser-role
-  namespace: default
+  namespace: {{ .Values.browser_namespace | default "browsers" }}
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: default
+  namespace: {{ .Release.Namespace }}
 
 roleRef:
-  kind: ClusterRole
+  kind: Role
   name: browser-run
   apiGroup: rbac.authorization.k8s.io
+

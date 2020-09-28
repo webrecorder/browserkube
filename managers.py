@@ -48,7 +48,7 @@ class K8SManager:
 
     async def list_pods(self, field_selector=None):
         api_response = await self.core_api.list_namespaced_pod(
-            namespace="browsers", field_selector=field_selector
+            namespace=self.namespace, field_selector=field_selector
         )
         return api_response
 
