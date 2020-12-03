@@ -55,4 +55,3 @@ spec:
           class: nginx
 
 {{ end }}
-

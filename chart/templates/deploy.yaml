@@ -5,7 +5,7 @@ metadata:
   name: cleanup
   namespace: {{ .Release.Namespace }}
 spec:
-  schedule: "*/30 * * * *"
+  schedule: {{ .Values.cleanup_schedule | quote }}
   successfulJobsHistoryLimit: 0
   failedJobsHistoryLimit: 1
   jobTemplate:
@@ -19,8 +19,8 @@ spec:
           restartPolicy: Never
           containers:
           - name: cleanup
-            image: {{ .Values.main_image | default "webrecorder/browserkube" }}
-            imagePullPolicy: Always
+            image: {{ .Values.main_image }}
+            imagePullPolicy: {{ .Values.main_pull_policy }}
             command: ["python", "cleanup.py"]
             envFrom:
             {{- if .Values.storage }}
@@ -33,10 +33,10 @@ spec:
 
             resources:
               limits:
-                cpu: 100m
+                cpu: {{ .Values.cleanup_limit_cpu }}
 
               requests:
-                cpu: 25m
+                cpu: {{ .Values.cleanup_requests_cpu }}
 
 ---
 apiVersion: apps/v1
@@ -48,7 +48,7 @@ spec:
   selector:
     matchLabels:
       app: {{ .Values.name }}
-  replicas: {{ .Values.num_backend_replicas | default 2 }}
+  replicas: {{ .Values.num_backend_replicas }}
   template:
     metadata:
       labels:
@@ -75,7 +75,7 @@ spec:
 
       initContainers:
         - name: nginx-init
-          image: nginx
+          image: {{ .Values.nginx_image }}
           command: ["/bin/sh"]
           args: ["-c", "echo resolver $(awk 'BEGIN{ORS=\" \"} $1==\"nameserver\" {print $2}' /etc/resolv.conf) \";\" > /etc/nginx/resolvers/resolvers.conf"]
           volumeMounts:
@@ -85,8 +85,8 @@ spec:
       containers:
 {{- if or .Values.enable_vnc .Values.remote_cdp }}
         - name: nginx
-          image: nginx
-          imagePullPolicy: IfNotPresent
+          image: {{ .Values.nginx_image }}
+          imagePullPolicy: {{ .Values.nginx_pull_policy }}
           volumeMounts:
             - name: data-config
               mountPath: /etc/nginx/nginx.conf
@@ -99,14 +99,14 @@ spec:
 
           resources:
             limits:
-              cpu: 100m
+              cpu: {{ .Values.nginx_limit_cpu }}
 
             requests:
-              cpu: 25m
+              cpu: {{ .Values.nginx_requests_cpu }}
 {{- end }}
         - name: main
-          image: {{ .Values.main_image | default "webrecorder/browserkube" }}
-          imagePullPolicy: Always
+          image: {{ .Values.main_image }}
+          imagePullPolicy: {{ .Values.main_pull_policy }}
           envFrom:
             - configMapRef:
                 name: {{ .Values.name }}-env-config
@@ -124,10 +124,10 @@ spec:
 
           resources:
             limits:
-              cpu: 100m
+              cpu: {{ .Values.main_limit_cpu }}
 
             requests:
-              cpu: 25m
+              cpu: {{ .Values.main_requests_cpu }}
 
 
 ---
@@ -164,5 +164,3 @@ spec:
     - protocol: TCP
       port: 80
       name: main
-
-
