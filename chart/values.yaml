@@ -43,6 +43,10 @@ storage: {}
 #   secret_key: "<S3 Secret Key>"
 #   # api_endpoint can be blank if using AWS S3, otherwise, set to your provider's S3 endpoint
 #   api_endpoint: ""
+#   # if your provider requires path-style URLs for S3 objects, set force_path_style to "true" (any truthy string)
+#   # https://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
+#   # (required for standard minio deployments)
+#  force_path_style: ""
 
 #   # the target bucket's name and desired storage subpath, formatted as an s3:// URL for convenience
 #   # (the protocol is ignored; the bucket == the netloc; the subpath == the rest)
