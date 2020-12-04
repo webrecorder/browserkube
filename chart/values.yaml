@@ -11,14 +11,14 @@ browser_image: "chrome:84"
 pywb_image: "webrecorder/browserkube-pywb"
 xvfb_image: "webrecorder/browserkube-xvfb"
 vnc_image: "oldwebtoday/remote-desktop-server:dev"
-ngninx_image: "nginx"
+nginx_image: "nginx"
 
 main_pull_policy: "Always"
 driver_pull_policy: "Always"
 pywb_pull_policy: "Always"
 xvfb_pull_policy: "Always"
 vnc_pull_policy: "Always"
-ngninx_pull_policy: "IfNotPresent"
+nginx_pull_policy: "IfNotPresent"
 
 #
 # Resource Limits
