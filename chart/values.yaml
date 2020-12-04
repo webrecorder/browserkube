@@ -4,7 +4,7 @@ name: browserkube
 # Images
 #
 
-main_image: "webrecorder/browserkube"
+main_image: "webrecorder/browserkube-main"
 driver_image: ""
 browser_image_template: "oldwebtoday/{0}"
 browser_image: "chrome:84"

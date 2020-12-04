@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
     browserkube:
-        image: webrecorder/browserkube
+        image: webrecorder/browserkube-main
         build: ./main/
 
     pywb:
