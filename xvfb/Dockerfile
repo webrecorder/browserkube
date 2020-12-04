@@ -1,4 +1,5 @@
-FROM python:3.8-alpine
+ARG BASE_IMAGE
+FROM $BASE_IMAGE
 
 RUN set -xe; \
     apk add --update xvfb;\

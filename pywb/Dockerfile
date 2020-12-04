@@ -1,4 +1,5 @@
-FROM webrecorder/pywb:develop
+ARG BASE_IMAGE
+FROM $BASE_IMAGE
 
 WORKDIR /app
 

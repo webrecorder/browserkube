@@ -1,5 +1,5 @@
-#FROM oldwebtoday/shepherd:1.2.0-dev
-FROM python:3.8
+ARG BASE_IMAGE
+FROM $BASE_IMAGE
 
 WORKDIR /app/
 
