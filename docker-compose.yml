@@ -3,7 +3,7 @@ version: '3.3'
 services:
     browserkube:
         image: webrecorder/browserkube
-        build: ./
+        build: ./main/
 
     pywb:
         image: webrecorder/browserkube-pywb
@@ -11,4 +11,4 @@ services:
 
     xvfb:
         image: webrecorder/browserkube-xvfb
-        build: ./xvfb
+        build: ./xvfb/
