@@ -22,11 +22,11 @@ Optional:
 
 ## Setup
 
-The system uses Helm to deploy to a Kubernetes cluster. All of the cluster config settings are set it config.yaml
+The system uses Helm to deploy to a Kubernetes cluster. All of the cluster config settings can be set using config.yaml:
 
-1. Copy `config.sample.yaml` -> `config.yaml`.
+1. `touch config.yaml`.
 
-2. Fill in the details of credentials.
+2. As desired, override any of the default config specified in `chart/values.yaml`. (For instance, add credentials for your S3-compatible storage by copying the example "storage" mapping, filling in your details instead of the placeholders.)
 
 3. Before first run, create the `browsers` namespace by running `kubectl create namespace browsers`.
 

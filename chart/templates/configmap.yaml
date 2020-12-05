@@ -6,23 +6,23 @@ metadata:
   namespace: {{ .Release.Namespace }}
 
 data:
-  BROWSER_NAMESPACE: {{ .Values.browser_namespace | default "browsers" }}
-  BROWSER_IMAGE_TEMPL: "oldwebtoday/{0}"
+  BROWSER_NAMESPACE: {{ .Values.browser_namespace }}
+  BROWSER_IMAGE_TEMPL: {{ .Values.browser_image_template }}
 
-  DEFAULT_BROWSER: {{ .Values.browser_image | default "chrome:84" }}
+  DEFAULT_BROWSER: {{ .Values.browser_image }}
   IN_CLUSTER: "1"
 
   JOB_ENV: "/tmp/job-env.yaml"
 
-  JOB_CLEANUP_INTERVAL: "{{ .Values.job_cleanup_interval }}"
-  PORT: "{{ or (default false .Values.enable_vnc) (default false .Values.remote_cdp) | ternary 8080 80 }}"
+  JOB_CLEANUP_INTERVAL: {{ .Values.job_cleanup_interval | quote }}
+  PORT: {{ or .Values.enable_vnc .Values.remote_cdp | ternary 8080 80 | quote }}
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: browser-config
-  namespace: {{ .Values.browser_namespace | default "browsers" }}
+  namespace: {{ .Values.browser_namespace }}
 
 data:
   BROWSER_HOST: "localhost"
@@ -31,7 +31,7 @@ data:
   PROXY_CA_FILE: "/tmp/proxy-ca.pem"
   CHROME_USER_DATA_DIR: "/tmp/profile"
   EXIT_FILE: "/tmp/out/exit"
- 
+
 
 {{- if .Values.storage }}
 ---
@@ -39,14 +39,15 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: storage-auth
-  namespace: {{ .Values.browser_namespace | default "browsers" }}
+  namespace: {{ .Values.browser_namespace }}
 type: Opaque
 stringData:
-  AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
-  AWS_SECRET_ACCESS_KEY: "{{ .Values.storage.secret_key }}"
-  AWS_ENDPOINT: "{{ .Values.storage.api_endpoint }}"
+  AWS_ACCESS_KEY_ID: {{ .Values.storage.access_key | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.storage.secret_key | quote }}
+  AWS_ENDPOINT: {{ .Values.storage.api_endpoint | quote }}
+  S3_FORCE_PATH_STYLE: {{ .Values.storage.force_path_style | quote }}
   MC_HOST: "https://{{ .Values.storage.access_key }}:{{ .Values.storage.secret_key }}@{{ .Values.profile_api_endpoint }}"
-  ACL: "{{ .Values.storage.acl }}"
+  ACL: {{ .Values.storage.acl | quote }}
 
 ---
 apiVersion: v1
@@ -59,6 +60,7 @@ stringData:
   AWS_ACCESS_KEY_ID: "{{ .Values.storage.access_key }}"
   AWS_SECRET_ACCESS_KEY: "{{ .Values.storage.secret_key }}"
   AWS_ENDPOINT: "{{ .Values.storage.api_endpoint }}"
+  S3_FORCE_PATH_STYLE: {{ .Values.storage.force_path_style | quote }}
 
 {{- end }}
 
@@ -71,27 +73,26 @@ metadata:
 data:
   job-env.yaml: |
     config:
-      driver_image: {{ .Values.driver_image | default ""}} 
-      pywb_image: {{ .Values.pywb_image | default "webrecorder/browserkube-pywb" }}
-      xvfb_image: {{ .Values.xvfb_image | default "webrecorder/browserkube-xvfb" }}
-      vnc_image: {{ .Values.vnc_image | default "oldwebtoday/remote-desktop-server:dev" }}
+      driver_image: {{ .Values.driver_image }}
+      pywb_image: {{ .Values.pywb_image }}
+      xvfb_image: {{ .Values.xvfb_image }}
+      vnc_image: {{ .Values.vnc_image }}
 
       job_max_duration:  {{ mul .Values.job_max_duration 60}}
 
-      mode: {{ .Values.browser_mode | default "headless" | quote }}
+      mode: {{ .Values.browser_mode  | quote }}
 
-      remote_cdp: {{ .Values.remote_cdp | default false }}
+      remote_cdp: {{ .Values.remote_cdp }}
 
-      profile_url: "{{ .Values.profile_url | default "" }}"
+      enable_vnc: {{ .Values.enable_vnc }}
 
-      enable_vnc: {{ .Values.enable_vnc | default false }}
-
-      idle_timeout: {{ .Values.idle_timeout | default "" }}
+      idle_timeout: {{ .Values.idle_timeout }}
 
       {{- if .Values.storage }}
-      storage_prefix: "{{ .Values.storage.storage_prefix }}"
+      storage_prefix: {{ .Values.storage.storage_prefix | quote }}
       {{- end }}
 
+      profile_url: {{ .Values.profile_url | default "" | quote }}
 
       {{- if .Values.profile_urls }}
       profile_urls:
@@ -163,7 +164,7 @@ data:
                 #proxy_send_timeout 3600s;
             }
             {{- end }}
- 
+
 
             {{- if .Values.enable_vnc }}
             location /_websockify {
