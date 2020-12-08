@@ -37,28 +37,32 @@ nginx_requests_cpu: "25m"
 # Storage
 #
 
-storage: {}
-# storage:
-#   access_key: "<S3 Access Key>"
-#   secret_key: "<S3 Secret Key>"
-#   # api_endpoint can be blank if using AWS S3, otherwise, set to your provider's S3 endpoint
-#   api_endpoint: ""
-#   # if your provider requires path-style URLs for S3 objects, set force_path_style to "true" (any truthy string)
-#   # https://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
-#   # (required for standard minio deployments)
-#  force_path_style: ""
+enable_minio: True
+minio:
+  fullnameOverride: minio
+  accessKey: "YOURACCESSKEY"
+  secretKey: "YOURSECRETKEY"
+  buckets:
+    - name: "browserkube"
+      policy: none
+      purge: True
 
-#   # the target bucket's name and desired storage subpath, formatted as an s3:// URL for convenience
-#   # (the protocol is ignored; the bucket == the netloc; the subpath == the rest)
-#   storage_prefix: "<s3://browserkube/dev/archives"
-
-#   # https:// url, publicly access prefix for the s3 storage (for preview):
-#   access_prefix: "<https://browserkube.s3.amazonaws.com/dev/archives>"
-
-#   # acl settings, if any
-#   # to enable uploaded files to be public, set to:
-#   # acl: "public-read"
-#   acl: ""
+storage:
+  access_key: "YOURACCESSKEY"
+  secret_key: "YOURSECRETKEY"
+  # api_endpoint can be "" if using AWS S3, otherwise, set to your provider's S3 endpoint
+  api_endpoint: "http://minio.default.svc.cluster.local:9000"
+  # if your provider requires path-style URLs for S3 objects, set force_path_style to "true" (any truthy string)
+  # https://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
+  force_path_style: "true"
+  # the target bucket's name and desired storage subpath, formatted as an s3:// URL for convenience
+  # (the protocol is ignored; the bucket == the netloc; the subpath == the rest)
+  storage_prefix: "http://browserkube/archives/"
+  # acl settings for uploaded files, if any.
+  # for example, to enable uploaded files to be public, set to:
+  # acl: "public-read"
+  # https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl
+  acl: ""
 
 
 #
