@@ -34,9 +34,7 @@ The system uses Helm to deploy to a Kubernetes cluster.
    1. `touch config.yaml`.
    2. As desired, override any of the default config in `helm show values browserkube/browserkube` (see `chart/values.yaml`) by adding keys to `config.yaml`. (For example, to use custom storage, set `enable_minio: False` and copy over the complete "storage" mapping, swapping in your credentials and details in place of the default minio config values.)
 
-2. Before first run, create the `browsers` namespace by running `kubectl create namespace browsers`.
-
-3. Run `helm install bk browserkube/browserkube -f ./config.yaml` to install a release (here, arbitrarily named "bk") of the chart on the currently configured Kubernetes cluster. If successful, `helm list` will list the `bk` release, and `kubectl get services` will list the `browserkube` service, and you should be able to see the service and its pods in the Kubernetes dashboard.
+3. Run `helm install bk browserkube/browserkube -f ./config.yaml` to install a release (here, arbitrarily named "bk") of the chart on the currently configured Kubernetes cluster. If successful, `helm list` will list the `bk` release, and `kubectl get services` will list the `browserkube` service, and you should be able to see the service and its pods in the Kubernetes dashboard. `kubectl get namespaces` should list the (newly-created) namespace specified by the `browser_namespace` config value.
 
 4. To uninstall the release, run `helm uninstall bk`.
 
