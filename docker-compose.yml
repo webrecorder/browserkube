@@ -9,14 +9,14 @@ services:
             BASE_IMAGE: "${MAIN_IMAGE_BASE:-python:3.8}"
 
     pywb:
-        image: "${PYWB_IMAGE:-webrecorder/browserkube-pywb}:${MAIN_TAG:-latest}"
+        image: "${PYWB_IMAGE:-webrecorder/browserkube-pywb}:${PYWB_TAG:-latest}"
         build:
           context: ./pywb/
           args:
             BASE_IMAGE: "${PYWB_IMAGE_BASE:-webrecorder/pywb:develop}"
 
     xvfb:
-        image: "${XVFB_IMAGE:-webrecorder/browserkube-xvfv}:${MAIN_TAG:-latest}"
+        image: "${XVFB_IMAGE:-webrecorder/browserkube-xvfv}:${XVFB_TAG:-latest}"
         build:
           context: ./xvfb/
           args:
