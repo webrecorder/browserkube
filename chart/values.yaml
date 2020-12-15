@@ -12,7 +12,7 @@ pywb_image: "webrecorder/browserkube-pywb"
 xvfb_image: "webrecorder/browserkube-xvfb"
 vnc_image: "oldwebtoday/remote-desktop-server:dev"
 nginx_image: "nginx"
-profile_image: "minio/mc"
+profile_image: "minio/mc:RELEASE.2020-11-25T23-04-07Z"
 
 main_pull_policy: "Always"
 driver_pull_policy: "Always"
