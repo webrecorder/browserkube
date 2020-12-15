@@ -3,7 +3,7 @@ kind: Job
 activeDeadlineSeconds: 600
 metadata:
   name: "{{ job_name }}"
-  labels: 
+  labels:
     jobid: "{{ jobid }}"
     {%- for name, value in labels.items() %}
     {{ name }}: "{{ value }}"
@@ -50,7 +50,8 @@ spec:
 
       initContainers:
         - name: init-profile
-          image: minio/mc
+          image: {{ profile_image }}
+          imagePullPolicy: {{ profile_pull_policy }}
           env:
             - name: MC_HOST_profile
               valueFrom:
@@ -71,7 +72,7 @@ spec:
 {% if mode != "headless" %}
         - name: {{ mode }}
           image: {{ vnc_image if mode == "vnc" else xvfb_image }}
-          imagePullPolicy: Always
+          imagePullPolicy: {{ vnc_pull_policy if mode == "vnc" else xvfb_pull_policy }}
           volumeMounts:
             - name: x11
               mountPath: '/tmp/.X11-unix/'
@@ -106,7 +107,7 @@ spec:
         # ==================================
         - name: browser
           image: {{ browser_image }}
-          imagePullPolicy: Always
+          imagePullPolicy: {{ browser_pull_policy }}
           envFrom:
             - configMapRef:
                 name: browser-config
@@ -161,8 +162,8 @@ spec:
         # pywb
         # ==================================
         - name: pywb
-          image: webrecorder/browserkube-pywb
-          imagePullPolicy: Always
+          image: {{ pywb_image }}
+          imagePullPolicy: {{ pywb_pull_policy }}
           env:
             - name: INIT_COLLECTION
               value: "capture"
@@ -185,7 +186,7 @@ spec:
         # ==================================
         - name: driver
           image: {{ driver_image }}
-          imagePullPolicy: Always
+          imagePullPolicy: {{ driver_pull_policy }}
 
           resources:
             limits:

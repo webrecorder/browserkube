@@ -12,13 +12,16 @@ pywb_image: "webrecorder/browserkube-pywb"
 xvfb_image: "webrecorder/browserkube-xvfb"
 vnc_image: "oldwebtoday/remote-desktop-server:dev"
 nginx_image: "nginx"
+profile_image: "minio/mc"
 
 main_pull_policy: "Always"
 driver_pull_policy: "Always"
+browser_pull_policy: "Always"
 pywb_pull_policy: "Always"
 xvfb_pull_policy: "Always"
 vnc_pull_policy: "Always"
 nginx_pull_policy: "IfNotPresent"
+profile_pull_policy: "Always"
 
 #
 # Resource Limits

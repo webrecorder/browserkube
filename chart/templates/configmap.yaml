@@ -77,6 +77,13 @@ data:
       pywb_image: {{ .Values.pywb_image }}
       xvfb_image: {{ .Values.xvfb_image }}
       vnc_image: {{ .Values.vnc_image }}
+      profile_image: {{ .Values.profile_image }}
+
+      driver_pull_policy: {{ .Values.driver_pull_policy }}
+      pywb_pull_policy: {{ .Values.pywb_pull_policy }}
+      xvfb_pull_policy: {{ .Values.xvfb_pull_policy }}
+      vnc_pull_policy: {{ .Values.vnc_pull_policy }}
+      profile_pull_policy: {{ .Values.profile_pull_policy }}
 
       job_max_duration:  {{ mul .Values.job_max_duration 60}}
 
