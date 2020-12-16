@@ -101,14 +101,16 @@ job_max_duration: "10"
 idle_timeout: ""
 
 # s3-like endpoint to load browser profiles from
-profile_api_endpoint: ""
-# example:
-# profile_api_endpoint: "s3.amazonaws.com"
+profile_storage:
+  access_key: "YOURACCESSKEY"
+  secret_key: "YOURSECRETKEY"
+  protocol: "http"
+  api_netloc: "minio.default.svc.cluster.local:9000"
 
 # a list of browser profiles to use when capturing specific URLs.
 # for each profile, specify:
 # "match": a regex to match against the full target URL
-# "url": the bucket and full path from which to retrieve the profile, using `profile_api_endpoint`
+# "url": the bucket and full path from which to retrieve the profile, using `profile_storage.api_netloc`
 profile_urls: []
 # example:
 # profile_urls:

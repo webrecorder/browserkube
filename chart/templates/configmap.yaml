@@ -46,7 +46,7 @@ stringData:
   AWS_SECRET_ACCESS_KEY: {{ .Values.storage.secret_key | quote }}
   AWS_ENDPOINT: {{ .Values.storage.api_endpoint | quote }}
   S3_FORCE_PATH_STYLE: {{ .Values.storage.force_path_style | quote }}
-  MC_HOST: "https://{{ .Values.storage.access_key }}:{{ .Values.storage.secret_key }}@{{ .Values.profile_api_endpoint }}"
+  MC_HOST: "{{ .Values.profile_storage.protocol }}://{{ .Values.profile_storage.access_key }}:{{ .Values.profile_storage.secret_key }}@{{ .Values.profile_storage.api_netloc }}"
   ACL: {{ .Values.storage.acl | quote }}
 
 ---
