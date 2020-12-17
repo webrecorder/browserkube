@@ -46,7 +46,7 @@ stringData:
   AWS_SECRET_ACCESS_KEY: {{ .Values.storage.secret_key | quote }}
   AWS_ENDPOINT: {{ .Values.storage.api_endpoint | quote }}
   S3_FORCE_PATH_STYLE: {{ .Values.storage.force_path_style | quote }}
-  MC_HOST: "https://{{ .Values.storage.access_key }}:{{ .Values.storage.secret_key }}@{{ .Values.profile_api_endpoint }}"
+  MC_HOST: "{{ .Values.profile_storage.protocol }}://{{ .Values.profile_storage.access_key }}:{{ .Values.profile_storage.secret_key }}@{{ .Values.profile_storage.api_netloc }}"
   ACL: {{ .Values.storage.acl | quote }}
 
 ---
@@ -77,6 +77,13 @@ data:
       pywb_image: {{ .Values.pywb_image }}
       xvfb_image: {{ .Values.xvfb_image }}
       vnc_image: {{ .Values.vnc_image }}
+      profile_image: {{ .Values.profile_image }}
+
+      driver_pull_policy: {{ .Values.driver_pull_policy }}
+      pywb_pull_policy: {{ .Values.pywb_pull_policy }}
+      xvfb_pull_policy: {{ .Values.xvfb_pull_policy }}
+      vnc_pull_policy: {{ .Values.vnc_pull_policy }}
+      profile_pull_policy: {{ .Values.profile_pull_policy }}
 
       job_max_duration:  {{ mul .Values.job_max_duration 60}}
 

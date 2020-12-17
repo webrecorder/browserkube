@@ -3,7 +3,67 @@ entries:
   browserkube:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2020-12-04T13:42:42.292017-05:00"
+    created: "2020-12-16T18:12:06.497619-05:00"
+    dependencies:
+    - condition: enable_minio
+      name: minio
+      repository: https://helm.min.io
+      version: "8"
+    description: A chart for running the Webrecorder Remote Browser System
+    digest: d21831e1f5ae1e18453d2c79ae6fe0e298ca9b45ec3c5cc8b675be1ea7e1977e
+    name: browserkube
+    type: application
+    urls:
+    - https://webrecorder.github.io/browserkube/charts/browserkube-0.6.0.tgz
+    version: 0.6.0
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2020-12-16T18:12:06.495158-05:00"
+    dependencies:
+    - condition: enable_minio
+      name: minio
+      repository: https://helm.min.io
+      version: "8"
+    description: A chart for running the Webrecorder Remote Browser System
+    digest: d42ce88c9c67d9a615185e3ac811ec357ad42bf0ddb0c079b7446de1290b2d01
+    name: browserkube
+    type: application
+    urls:
+    - https://webrecorder.github.io/browserkube/charts/browserkube-0.5.1.tgz
+    version: 0.5.1
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2020-12-16T18:12:06.492455-05:00"
+    dependencies:
+    - condition: enable_minio
+      name: minio
+      repository: https://helm.min.io
+      version: "8"
+    description: A chart for running the Webrecorder Remote Browser System
+    digest: 085877b5030e6fba3fbabfa6787460eb893c607ed5f95a76e9dc35383e82ae23
+    name: browserkube
+    type: application
+    urls:
+    - https://webrecorder.github.io/browserkube/charts/browserkube-0.5.0.tgz
+    version: 0.5.0
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2020-12-16T18:12:06.489606-05:00"
+    dependencies:
+    - condition: enable_minio
+      name: minio
+      repository: https://helm.min.io
+      version: "8"
+    description: A chart for running the Webrecorder Remote Browser System
+    digest: 99a4a3e51b895633f021ee265b895d999dab07c53ef01cbe8505133e1a857514
+    name: browserkube
+    type: application
+    urls:
+    - https://webrecorder.github.io/browserkube/charts/browserkube-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2020-12-16T18:12:06.484867-05:00"
     description: A chart for running the Webrecorder Remote Browser System
     digest: 7b0b138d7ca6b0e8fc471efd1f27ad6bc4353b91e49919e62532b3a7241804fc
     name: browserkube
@@ -13,7 +73,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2020-12-04T13:42:42.291347-05:00"
+    created: "2020-12-16T18:12:06.48345-05:00"
     description: A chart for running the Webrecorder Remote Browser System
     digest: 6214e7f4486842918a00c79ac0e7bde87ced85da2c2d11e7b044dc473d669e52
     name: browserkube
@@ -23,7 +83,7 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2020-12-04T13:42:42.290195-05:00"
+    created: "2020-12-16T18:12:06.482329-05:00"
     description: A chart for running the Webrecorder Remote Browser System
     digest: 04f76db99440d30531523c42909909246b231c05607f2639edf865dd63c5cd34
     name: browserkube
@@ -33,7 +93,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2020-12-04T13:42:42.28951-05:00"
+    created: "2020-12-16T18:12:06.481766-05:00"
     description: A chart for running the Webrecorder Remote Browser System
     digest: 19c2bd10ceb6951a2ba1f848bea27edc6276d1278fa13d75f80bdcd1dccfe6ce
     name: browserkube
@@ -41,4 +101,4 @@ entries:
     urls:
     - https://webrecorder.github.io/browserkube/charts/browserkube-0.1.0.tgz
     version: 0.1.0
-generated: "2020-12-04T13:42:42.287934-05:00"
+generated: "2020-12-16T18:12:06.480924-05:00"

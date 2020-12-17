@@ -4,7 +4,7 @@ name: browserkube
 # Images
 #
 
-main_image: "webrecorder/browserkube"
+main_image: "webrecorder/browserkube-main"
 driver_image: ""
 browser_image_template: "oldwebtoday/{0}"
 browser_image: "chrome:84"
@@ -12,13 +12,16 @@ pywb_image: "webrecorder/browserkube-pywb"
 xvfb_image: "webrecorder/browserkube-xvfb"
 vnc_image: "oldwebtoday/remote-desktop-server:dev"
 nginx_image: "nginx"
+profile_image: "minio/mc:RELEASE.2020-11-25T23-04-07Z"
 
 main_pull_policy: "Always"
 driver_pull_policy: "Always"
+browser_pull_policy: "Always"
 pywb_pull_policy: "Always"
 xvfb_pull_policy: "Always"
 vnc_pull_policy: "Always"
 nginx_pull_policy: "IfNotPresent"
+profile_pull_policy: "Always"
 
 #
 # Resource Limits
@@ -37,28 +40,32 @@ nginx_requests_cpu: "25m"
 # Storage
 #
 
-storage: {}
-# storage:
-#   access_key: "<S3 Access Key>"
-#   secret_key: "<S3 Secret Key>"
-#   # api_endpoint can be blank if using AWS S3, otherwise, set to your provider's S3 endpoint
-#   api_endpoint: ""
-#   # if your provider requires path-style URLs for S3 objects, set force_path_style to "true" (any truthy string)
-#   # https://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
-#   # (required for standard minio deployments)
-#  force_path_style: ""
+enable_minio: True
+minio:
+  fullnameOverride: minio
+  accessKey: "YOURACCESSKEY"
+  secretKey: "YOURSECRETKEY"
+  buckets:
+    - name: "browserkube"
+      policy: none
+      purge: True
 
-#   # the target bucket's name and desired storage subpath, formatted as an s3:// URL for convenience
-#   # (the protocol is ignored; the bucket == the netloc; the subpath == the rest)
-#   storage_prefix: "<s3://browserkube/dev/archives"
-
-#   # https:// url, publicly access prefix for the s3 storage (for preview):
-#   access_prefix: "<https://browserkube.s3.amazonaws.com/dev/archives>"
-
-#   # acl settings, if any
-#   # to enable uploaded files to be public, set to:
-#   # acl: "public-read"
-#   acl: ""
+storage:
+  access_key: "YOURACCESSKEY"
+  secret_key: "YOURSECRETKEY"
+  # api_endpoint can be "" if using AWS S3, otherwise, set to your provider's S3 endpoint
+  api_endpoint: "http://minio.default.svc.cluster.local:9000"
+  # if your provider requires path-style URLs for S3 objects, set force_path_style to "true" (any truthy string)
+  # https://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
+  force_path_style: "true"
+  # the target bucket's name and desired storage subpath, formatted as an s3:// URL for convenience
+  # (the protocol is ignored; the bucket == the netloc; the subpath == the rest)
+  storage_prefix: "http://browserkube/archives/"
+  # acl settings for uploaded files, if any.
+  # for example, to enable uploaded files to be public, set to:
+  # acl: "public-read"
+  # https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl
+  acl: ""
 
 
 #
@@ -94,14 +101,16 @@ job_max_duration: "10"
 idle_timeout: ""
 
 # s3-like endpoint to load browser profiles from
-profile_api_endpoint: ""
-# example:
-# profile_api_endpoint: "s3.amazonaws.com"
+profile_storage:
+  access_key: "YOURACCESSKEY"
+  secret_key: "YOURSECRETKEY"
+  protocol: "http"
+  api_netloc: "minio.default.svc.cluster.local:9000"
 
 # a list of browser profiles to use when capturing specific URLs.
 # for each profile, specify:
 # "match": a regex to match against the full target URL
-# "url": the bucket and full path from which to retrieve the profile, using `profile_api_endpoint`
+# "url": the bucket and full path from which to retrieve the profile, using `profile_storage.api_netloc`
 profile_urls: []
 # example:
 # profile_urls:

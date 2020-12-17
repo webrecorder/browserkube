@@ -2,13 +2,22 @@ version: '3.3'
 
 services:
     browserkube:
-        image: webrecorder/browserkube
-        build: ./
+        image: "${MAIN_IMAGE:-webrecorder/browserkube-main}:${MAIN_TAG:-latest}"
+        build:
+          context: ./main/
+          args:
+            BASE_IMAGE: "${MAIN_IMAGE_BASE:-python:3.8}"
 
     pywb:
-        image: webrecorder/browserkube-pywb
-        build: ./pywb/
+        image: "${PYWB_IMAGE:-webrecorder/browserkube-pywb}:${PYWB_TAG:-latest}"
+        build:
+          context: ./pywb/
+          args:
+            BASE_IMAGE: "${PYWB_IMAGE_BASE:-webrecorder/pywb:develop}"
 
     xvfb:
-        image: webrecorder/browserkube-xvfb
-        build: ./xvfb
+        image: "${XVFB_IMAGE:-webrecorder/browserkube-xvfv}:${XVFB_TAG:-latest}"
+        build:
+          context: ./xvfb/
+          args:
+            BASE_IMAGE: "${XVFB_IMAGE_BASE:-python:3.8-alpine}"
