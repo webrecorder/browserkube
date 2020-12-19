@@ -6,3 +6,5 @@ WORKDIR /app
 RUN pip install -U warcio "git+https://github.com/webrecorder/wacz-format.git@master#egg=wacz&subdirectory=py-wacz"
 
 COPY . /app/
+
+COPY uwsgi.ini /uwsgi/

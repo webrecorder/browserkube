@@ -72,7 +72,8 @@ class CaptureApp(FrontEndApp):
         params = dict(parse_qsl(environ.get("QUERY_STRING")))
 
         archive_dir = os.path.join("collections", coll, "archive")
-        all_warcs = [
+        all_warcs = ['create', '-f']
+        all_warcs += [
             os.path.join(archive_dir, name) for name in os.listdir(archive_dir)
         ]
         all_warcs.append("-o")
