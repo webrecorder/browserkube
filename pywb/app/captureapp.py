@@ -72,20 +72,20 @@ class CaptureApp(FrontEndApp):
         params = dict(parse_qsl(environ.get("QUERY_STRING")))
 
         archive_dir = os.path.join("collections", coll, "archive")
-        all_warcs = ['create', '-f']
-        all_warcs += [
+        args = ['create', '-f']
+        args += [
             os.path.join(archive_dir, name) for name in os.listdir(archive_dir)
         ]
-        all_warcs.append("-o")
-        all_warcs.append("/tmp/out/archive.wacz")
+        args.append("-o")
+        args.append("/tmp/out/archive.wacz")
 
         url = params.get("url")
         if url:
-            all_warcs.append("--url")
-            all_warcs.append(url)
+            args.append("--url")
+            args.append(url)
 
         try:
-            wacz_main(all_warcs)
+            wacz_main(args)
         except Exception as e:
             print(e)
 
