@@ -13,10 +13,10 @@ services:
         build:
           context: ./pywb/
           args:
-            BASE_IMAGE: "${PYWB_IMAGE_BASE:-webrecorder/pywb:develop}"
+            BASE_IMAGE: "${PYWB_IMAGE_BASE:-webrecorder/pywb:latest}"
 
     xvfb:
-        image: "${XVFB_IMAGE:-webrecorder/browserkube-xvfv}:${XVFB_TAG:-latest}"
+        image: "${XVFB_IMAGE:-webrecorder/browserkube-xvfb}:${XVFB_TAG:-latest}"
         build:
           context: ./xvfb/
           args:
